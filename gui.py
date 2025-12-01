@@ -422,60 +422,138 @@ class ModernMetricCard(tk.Frame):
         self.value_label.config(text=value)
 
 
-class ModernButton(tk.Button):
+class ModernButton(tk.Frame):
     """
-    Modern styled button with hover effects.
+    Modern styled button with border, hover effects, and better visibility.
+    Uses a Frame-based approach for better cross-platform rendering.
     """
     
     def __init__(self, parent, text: str, command=None, 
                  style: str = "primary", icon: str = "", **kwargs):
-        self.style = style
+        self.button_style = style
+        self.command = command
         self.colors = self._get_style_colors()
+        self._disabled = False
         
-        super().__init__(
-            parent,
-            text=f"{icon} {text}".strip(),
-            command=command,
-            font=("Segoe UI", 10, "bold"),
+        # Create outer frame for border effect
+        super().__init__(parent, bg=self.colors['border'], 
+                        highlightthickness=0, **kwargs)
+        
+        # Inner frame for background
+        self.inner = tk.Frame(self, bg=self.colors['bg'], padx=2, pady=2)
+        self.inner.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
+        
+        # Label as the clickable content
+        self.label = tk.Label(
+            self.inner,
+            text=f"{icon}  {text}".strip() if icon else text,
+            font=("Helvetica Neue", 11, "bold"),
             fg=self.colors['fg'],
             bg=self.colors['bg'],
-            activeforeground=self.colors['fg'],
-            activebackground=self.colors['hover'],
-            relief=tk.FLAT,
             cursor="hand2",
-            padx=16,
-            pady=8,
-            **kwargs
+            padx=14,
+            pady=6
         )
+        self.label.pack(fill=tk.BOTH, expand=True)
         
-        # Bind hover events
-        self.bind("<Enter>", self._on_enter)
-        self.bind("<Leave>", self._on_leave)
+        # Bind click and hover events to all parts
+        for widget in [self, self.inner, self.label]:
+            widget.bind("<Button-1>", self._on_click)
+            widget.bind("<Enter>", self._on_enter)
+            widget.bind("<Leave>", self._on_leave)
     
     def _get_style_colors(self) -> dict:
-        """Get colors based on button style."""
+        """Get colors based on button style with high contrast."""
         styles = {
-            'primary': {'bg': ModernColors.PRIMARY, 'fg': '#ffffff', 
-                       'hover': '#3651d4'},
-            'success': {'bg': ModernColors.SUCCESS, 'fg': '#ffffff', 
-                       'hover': '#05c090'},
-            'danger': {'bg': ModernColors.DANGER, 'fg': '#ffffff', 
-                      'hover': '#dc3d5f'},
-            'warning': {'bg': ModernColors.WARNING, 'fg': '#1a1a2e', 
-                       'hover': '#eec44e'},
-            'secondary': {'bg': ModernColors.BG_CARD_HOVER, 
-                         'fg': ModernColors.TEXT_PRIMARY, 
-                         'hover': '#303050'},
+            'primary': {
+                'bg': '#3b82f6',      # Bright blue
+                'fg': '#ffffff',
+                'hover': '#2563eb',   # Darker blue
+                'border': '#1d4ed8',  # Blue border
+                'disabled_bg': '#4a5568',
+                'disabled_fg': '#9ca3af'
+            },
+            'success': {
+                'bg': '#10b981',      # Emerald green
+                'fg': '#ffffff',
+                'hover': '#059669',   # Darker green
+                'border': '#047857',  # Green border
+                'disabled_bg': '#4a5568',
+                'disabled_fg': '#9ca3af'
+            },
+            'danger': {
+                'bg': '#ef4444',      # Bright red
+                'fg': '#ffffff',
+                'hover': '#dc2626',   # Darker red
+                'border': '#b91c1c',  # Red border
+                'disabled_bg': '#4a5568',
+                'disabled_fg': '#9ca3af'
+            },
+            'warning': {
+                'bg': '#f59e0b',      # Amber
+                'fg': '#1a1a2e',      # Dark text for contrast
+                'hover': '#d97706',   # Darker amber
+                'border': '#b45309',  # Amber border
+                'disabled_bg': '#4a5568',
+                'disabled_fg': '#9ca3af'
+            },
+            'secondary': {
+                'bg': '#4b5563',      # Gray
+                'fg': '#ffffff',
+                'hover': '#374151',   # Darker gray
+                'border': '#1f2937',  # Dark border
+                'disabled_bg': '#4a5568',
+                'disabled_fg': '#9ca3af'
+            },
         }
-        return styles.get(self.style, styles['primary'])
+        return styles.get(self.button_style, styles['primary'])
+    
+    def _on_click(self, event):
+        """Handle button click."""
+        if not self._disabled and self.command:
+            self.command()
     
     def _on_enter(self, event):
-        """Handle mouse enter."""
-        self.config(bg=self.colors['hover'])
+        """Handle mouse enter - show hover state."""
+        if not self._disabled:
+            self.inner.config(bg=self.colors['hover'])
+            self.label.config(bg=self.colors['hover'])
     
     def _on_leave(self, event):
-        """Handle mouse leave."""
-        self.config(bg=self.colors['bg'])
+        """Handle mouse leave - restore normal state."""
+        if not self._disabled:
+            self.inner.config(bg=self.colors['bg'])
+            self.label.config(bg=self.colors['bg'])
+    
+    def config(self, **kwargs):
+        """Handle config changes, especially state."""
+        if 'state' in kwargs:
+            state_val = kwargs.pop('state')
+            if state_val == tk.DISABLED:
+                self._disabled = True
+                self.inner.config(bg=self.colors['disabled_bg'])
+                self.label.config(
+                    bg=self.colors['disabled_bg'],
+                    fg=self.colors['disabled_fg'],
+                    cursor="arrow"
+                )
+                super().configure(bg=self.colors['disabled_bg'])
+            else:
+                self._disabled = False
+                self.inner.config(bg=self.colors['bg'])
+                self.label.config(
+                    bg=self.colors['bg'],
+                    fg=self.colors['fg'],
+                    cursor="hand2"
+                )
+                super().configure(bg=self.colors['border'])
+        # Handle other kwargs by passing to parent
+        if kwargs:
+            super().configure(**kwargs)
+    
+    def configure(self, **kwargs):
+        """Alias for config."""
+        self.config(**kwargs)
 
 
 # Legacy widget aliases for compatibility
