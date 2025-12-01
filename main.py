@@ -76,12 +76,16 @@ def run_cli_simulation():
     Run a command-line simulation for testing purposes.
     
     This provides a quick way to test the core simulation logic
-    without the GUI.
+    without the GUI. Uses the new SimulationEngine for proper execution.
     """
     print_banner()
     print("\n[CLI Mode - Testing Core Simulation]\n")
     
-    # Initialize components
+    # Import simulation engine
+    from simulation import SimulationEngine, BatchSimulator
+    from load_balancer import LoadBalancerFactory
+    
+    # Initialize configuration
     config = SimulationConfig(
         num_processors=4,
         num_processes=10,
@@ -91,96 +95,75 @@ def run_cli_simulation():
     logger = setup_logging()
     logger.info("Starting CLI simulation")
     
-    # Create processor manager
-    processor_manager = ProcessorManager(
-        num_processors=config.num_processors,
-        config=config
-    )
-    
-    # Generate processes
-    generator = ProcessGenerator(config)
-    processes = generator.generate_predefined_test_set()
-    
     print(f"Configuration:")
     print(f"  Processors: {config.num_processors}")
-    print(f"  Processes: {len(processes)}")
+    print(f"  Processes: {config.num_processes}")
     print(f"  Time Quantum: {config.time_quantum}")
     print(f"  Algorithm: {config.default_algorithm.value}")
     
-    print(f"\nGenerated Processes:")
+    # Create and run simulation engine
+    print(f"\n[Running Simulation with {config.default_algorithm.value}]")
     print("-" * 60)
-    for p in processes:
+    
+    engine = SimulationEngine(config)
+    engine.initialize(algorithm=config.default_algorithm)
+    
+    # Show generated processes
+    print(f"\nGenerated Processes:")
+    for p in engine.all_processes:
         print(f"  P{p.pid}: arrival={p.arrival_time}, burst={p.burst_time}, "
               f"priority={p.priority.name}")
     
-    # Simple Round Robin distribution for testing
-    print(f"\n[Distributing processes using Round Robin]")
-    rr_index = 0
-    for p in processes:
-        processor_id = rr_index % config.num_processors
-        processor_manager[processor_id].add_process(p)
-        print(f"  P{p.pid} -> Processor {processor_id}")
-        rr_index += 1
-    
-    # Show initial loads
-    print(f"\nInitial Processor Loads:")
-    for proc in processor_manager:
-        print(f"  Processor {proc.processor_id}: "
-              f"queue={proc.get_queue_size()}, load={proc.get_load():.2f}")
-    
     # Run simulation
-    print(f"\n[Running Simulation]")
-    print("-" * 60)
+    print(f"\n[Simulation Progress]")
+    result = engine.run()
     
-    current_time = 0
-    max_time = 100  # Safety limit
-    
-    while not processor_manager.all_idle() and current_time < max_time:
-        # Execute one time slice on all processors
-        results = processor_manager.execute_all(current_time)
-        
-        # Update waiting times
-        processor_manager.update_all_waiting_times()
-        
-        # Print progress every 5 time units
-        if current_time % 5 == 0:
-            active = sum(1 for r in results if r['executed'])
-            completed = processor_manager.get_completed_count()
-            print(f"  Time {current_time:3d}: {active} processors active, "
-                  f"{completed}/{len(processes)} completed")
-        
-        current_time += 1
-    
-    # Calculate final metrics
+    # Display results
     print(f"\n[Simulation Complete]")
     print("-" * 60)
-    print(f"Total Time: {current_time} time units")
-    print(f"Completed: {processor_manager.get_completed_count()}/{len(processes)}")
+    print(f"Total Time: {result.total_time} time units")
+    print(f"Execution Duration: {result.execution_duration:.3f} seconds")
+    print(f"Completed: {result.system_metrics.completed_processes}/{result.system_metrics.total_processes}")
     
     # Process metrics
-    completed_processes = [p for p in processes if p.is_completed()]
-    
-    if completed_processes:
-        turnaround_times = [p.get_turnaround_time() for p in completed_processes]
-        waiting_times = [p.waiting_time for p in completed_processes]
-        
-        print(f"\nProcess Metrics:")
-        print(f"  Average Turnaround Time: {calculate_mean(turnaround_times):.2f}")
-        print(f"  Average Waiting Time: {calculate_mean(waiting_times):.2f}")
+    print(f"\nProcess Metrics:")
+    print(f"  Average Turnaround Time: {result.system_metrics.avg_turnaround_time:.2f}")
+    print(f"  Average Waiting Time: {result.system_metrics.avg_waiting_time:.2f}")
+    print(f"  Average Response Time: {result.system_metrics.avg_response_time:.2f}")
     
     # Processor metrics
-    utilizations = processor_manager.get_utilizations(current_time)
-    
     print(f"\nProcessor Metrics:")
-    for i, proc in enumerate(processor_manager):
-        print(f"  Processor {i}: "
-              f"Utilization={utilizations[i]*100:.1f}%, "
-              f"Completed={proc.statistics.processes_completed}")
+    for pm in result.processor_metrics:
+        util = pm.get_utilization(result.total_time) * 100
+        print(f"  Processor {pm.processor_id}: "
+              f"Utilization={util:.1f}%, "
+              f"Completed={pm.processes_completed}")
     
     print(f"\nOverall Metrics:")
-    print(f"  Average Utilization: {calculate_mean(utilizations)*100:.1f}%")
-    print(f"  Load Balance Index: {calculate_load_balance_index(processor_manager.get_loads()):.4f}")
-    print(f"  Jain's Fairness Index: {calculate_jains_fairness_index(utilizations):.4f}")
+    print(f"  Average Utilization: {result.system_metrics.avg_utilization*100:.1f}%")
+    print(f"  Load Balance Index: {result.system_metrics.load_balance_index:.4f}")
+    print(f"  Jain's Fairness Index: {result.system_metrics.jains_fairness_index:.4f}")
+    print(f"  Total Migrations: {result.system_metrics.total_migrations}")
+    
+    # Run comparison across all algorithms
+    print(f"\n[Algorithm Comparison]")
+    print("-" * 60)
+    
+    batch = BatchSimulator(config)
+    comparison_results = batch.run_comparison()
+    
+    print("\nResults by Algorithm:")
+    for algo_name, algo_result in comparison_results.items():
+        m = algo_result.system_metrics
+        print(f"\n  {algo_name}:")
+        print(f"    Time: {algo_result.total_time}")
+        print(f"    Avg Turnaround: {m.avg_turnaround_time:.2f}")
+        print(f"    Avg Waiting: {m.avg_waiting_time:.2f}")
+        print(f"    Utilization: {m.avg_utilization*100:.1f}%")
+        print(f"    Migrations: {m.total_migrations}")
+    
+    print(f"\n  Best for turnaround: {batch.get_best_algorithm('avg_turnaround_time')}")
+    print(f"  Best for fairness: {batch.get_best_algorithm('jains_fairness_index')}")
     
     logger.info("CLI simulation completed")
     print("\n[CLI Simulation Complete]")
@@ -258,6 +241,94 @@ def run_module_tests():
     except Exception as e:
         test_results.append(("utils.py", f"FAIL: {e}"))
         print(f"  ✗ utils.py: FAIL - {e}")
+    
+    # Test metrics module
+    print("Testing metrics.py...")
+    try:
+        from metrics import (
+            ProcessMetrics,
+            ProcessorMetrics,
+            SystemMetrics,
+            MetricsCalculator,
+            MetricsComparator
+        )
+        calc = MetricsCalculator()
+        assert calc is not None
+        comparator = MetricsComparator()
+        assert comparator is not None
+        
+        test_results.append(("metrics.py", "PASS"))
+        print("  ✓ metrics.py: PASS")
+    except Exception as e:
+        test_results.append(("metrics.py", f"FAIL: {e}"))
+        print(f"  ✗ metrics.py: FAIL - {e}")
+    
+    # Test load_balancer module
+    print("Testing load_balancer.py...")
+    try:
+        from load_balancer import (
+            LoadBalancerFactory,
+            RoundRobinBalancer,
+            LeastLoadedBalancer,
+            ThresholdBasedBalancer
+        )
+        from config import LoadBalancingAlgorithm
+        
+        rr = LoadBalancerFactory.create(LoadBalancingAlgorithm.ROUND_ROBIN)
+        assert rr is not None
+        ll = LoadBalancerFactory.create(LoadBalancingAlgorithm.LEAST_LOADED)
+        assert ll is not None
+        tb = LoadBalancerFactory.create(LoadBalancingAlgorithm.THRESHOLD_BASED)
+        assert tb is not None
+        
+        test_results.append(("load_balancer.py", "PASS"))
+        print("  ✓ load_balancer.py: PASS")
+    except Exception as e:
+        test_results.append(("load_balancer.py", f"FAIL: {e}"))
+        print(f"  ✗ load_balancer.py: FAIL - {e}")
+    
+    # Test simulation module
+    print("Testing simulation.py...")
+    try:
+        from simulation import (
+            SimulationEngine,
+            SimulationState,
+            BatchSimulator
+        )
+        engine = SimulationEngine()
+        assert engine is not None
+        assert engine.state == SimulationState.IDLE
+        
+        test_results.append(("simulation.py", "PASS"))
+        print("  ✓ simulation.py: PASS")
+    except Exception as e:
+        test_results.append(("simulation.py", f"FAIL: {e}"))
+        print(f"  ✗ simulation.py: FAIL - {e}")
+    
+    # Test GUI module
+    print("Testing gui.py...")
+    try:
+        from gui import (
+            LoadBalancerGUI,
+            ColorScheme,
+            LoadBar,
+            ProcessorWidget,
+            MetricCard
+        )
+        # Test color scheme
+        assert ColorScheme.get_load_color(0.3) == ColorScheme.LOAD_LOW
+        assert ColorScheme.get_load_color(0.5) == ColorScheme.LOAD_MEDIUM
+        assert ColorScheme.get_load_color(0.8) == ColorScheme.LOAD_HIGH
+        
+        # Test processor color assignment
+        color = ColorScheme.get_processor_color(0)
+        assert color is not None
+        
+        test_results.append(("gui.py", "PASS"))
+        print("  ✓ gui.py: PASS")
+    except Exception as e:
+        test_results.append(("gui.py", f"FAIL: {e}"))
+        print(f"  ✗ gui.py: FAIL - {e}")
     
     # Summary
     print("\n" + "=" * 60)

@@ -331,6 +331,32 @@ class Process:
         if self.state == ProcessState.READY:
             self.waiting_time += time_units
     
+    def add_history_entry(self, time: int, event: str, 
+                          source_processor: int = None, 
+                          dest_processor: int = None) -> None:
+        """
+        Add an event to the process execution history.
+        
+        Used for tracking migrations and other events for visualization.
+        
+        Args:
+            time: Time of the event
+            event: Type of event (e.g., "MIGRATED", "STARTED", "COMPLETED")
+            source_processor: Source processor ID (for migrations)
+            dest_processor: Destination processor ID (for migrations)
+        """
+        entry = {
+            'time': time,
+            'event': event,
+            'processor_id': self.processor_id
+        }
+        if source_processor is not None:
+            entry['source_processor'] = source_processor
+        if dest_processor is not None:
+            entry['dest_processor'] = dest_processor
+        
+        self.execution_history.append(entry)
+    
     # =========================================================================
     # Query Methods
     # =========================================================================
