@@ -11,11 +11,12 @@ Components:
 4. Metrics Dashboard - Performance statistics and comparison
 5. Process Table - Detailed process information
 
-OS Concepts Demonstrated:
-- Process state visualization (Ready, Running, Completed)
-- CPU utilization monitoring
-- Load balancing decision visualization
-- Migration tracking and display
+Features:
+- Modern dark/light theme with glassmorphism effects
+- Animated load bars with gradient fills
+- Card-based responsive layout
+- Professional color scheme
+- Status LED indicators
 
 Author: Student
 Date: December 2024
@@ -37,7 +38,7 @@ matplotlib.use('TkAgg')  # Use Tkinter backend
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 import matplotlib.pyplot as plt
-from matplotlib.patches import Rectangle
+from matplotlib.patches import Rectangle, FancyBboxPatch
 import matplotlib.colors as mcolors
 
 # Import project modules
@@ -60,237 +61,454 @@ from metrics import MetricsCalculator, MetricsComparator, SystemMetrics
 
 
 # =============================================================================
-# COLOR SCHEMES AND CONSTANTS
+# MODERN COLOR SCHEMES AND CONSTANTS
 # =============================================================================
 
-class ColorScheme:
+class ModernColors:
     """
-    Color scheme for the GUI.
-    
-    Using consistent colors improves user experience and makes
-    the visualization easier to understand.
+    Modern color scheme with dark mode support.
+    Uses a professional color palette with gradients and accents.
     """
-    # Main colors
-    BACKGROUND = "#f0f0f0"
-    PANEL_BG = "#ffffff"
-    TEXT = "#333333"
-    TEXT_LIGHT = "#666666"
+    # Background colors
+    BG_DARK = "#0f0f1a"
+    BG_CARD = "#1a1a2e"
+    BG_CARD_HOVER = "#252542"
+    BG_INPUT = "#16213e"
     
-    # Load level colors
-    LOAD_LOW = "#4CAF50"      # Green - low load (0-40%)
-    LOAD_MEDIUM = "#FFC107"   # Yellow - medium load (40-70%)
-    LOAD_HIGH = "#F44336"     # Red - high load (70-100%)
+    # Accent colors
+    PRIMARY = "#4361ee"
+    PRIMARY_LIGHT = "#4cc9f0"
+    SECONDARY = "#7209b7"
+    ACCENT = "#f72585"
+    
+    # Text colors
+    TEXT_PRIMARY = "#ffffff"
+    TEXT_SECONDARY = "#a0a0b0"
+    TEXT_MUTED = "#6c6c7c"
+    
+    # Status colors
+    SUCCESS = "#06d6a0"
+    WARNING = "#ffd166"
+    DANGER = "#ef476f"
+    INFO = "#118ab2"
+    
+    # Load level colors (gradient-ready)
+    LOAD_LOW = "#06d6a0"       # Emerald green
+    LOAD_MEDIUM = "#ffd166"    # Amber
+    LOAD_HIGH = "#ef476f"      # Coral red
+    LOAD_CRITICAL = "#d90429"  # Deep red
     
     # Process state colors
-    STATE_NEW = "#9E9E9E"       # Gray
-    STATE_READY = "#2196F3"     # Blue
-    STATE_RUNNING = "#4CAF50"   # Green
-    STATE_WAITING = "#FF9800"   # Orange
-    STATE_COMPLETED = "#8BC34A" # Light Green
-    STATE_MIGRATING = "#9C27B0" # Purple
+    STATE_NEW = "#6c757d"
+    STATE_READY = "#4361ee"
+    STATE_RUNNING = "#06d6a0"
+    STATE_WAITING = "#ffd166"
+    STATE_COMPLETED = "#20c997"
+    STATE_MIGRATING = "#7209b7"
     
-    # Priority colors
-    PRIORITY_HIGH = "#F44336"   # Red
-    PRIORITY_MEDIUM = "#FF9800" # Orange
-    PRIORITY_LOW = "#4CAF50"    # Green
-    
-    # Processor colors (for Gantt chart)
+    # Processor visualization colors
     PROCESSOR_COLORS = [
-        "#2196F3",  # Blue
-        "#4CAF50",  # Green
-        "#FF9800",  # Orange
-        "#9C27B0",  # Purple
-        "#00BCD4",  # Cyan
-        "#E91E63",  # Pink
-        "#CDDC39",  # Lime
-        "#795548",  # Brown
+        "#4361ee",  # Royal Blue
+        "#06d6a0",  # Emerald
+        "#f72585",  # Pink
+        "#7209b7",  # Purple
+        "#4cc9f0",  # Cyan
+        "#ffd166",  # Amber
+        "#ff6b6b",  # Coral
+        "#48cae4",  # Sky Blue
     ]
     
-    # Button colors
-    BUTTON_START = "#4CAF50"
-    BUTTON_STOP = "#F44336"
-    BUTTON_PAUSE = "#FF9800"
-    BUTTON_RESET = "#2196F3"
+    # Gradient pairs for bars
+    GRADIENT_SUCCESS = ("#06d6a0", "#20c997")
+    GRADIENT_WARNING = ("#ffd166", "#ffbe0b")
+    GRADIENT_DANGER = ("#ef476f", "#d90429")
+    GRADIENT_INFO = ("#4361ee", "#4cc9f0")
     
     @staticmethod
     def get_load_color(load_percentage: float) -> str:
         """Get color based on load percentage."""
         if load_percentage < 0.4:
-            return ColorScheme.LOAD_LOW
+            return ModernColors.LOAD_LOW
         elif load_percentage < 0.7:
-            return ColorScheme.LOAD_MEDIUM
+            return ModernColors.LOAD_MEDIUM
+        elif load_percentage < 0.9:
+            return ModernColors.LOAD_HIGH
         else:
-            return ColorScheme.LOAD_HIGH
+            return ModernColors.LOAD_CRITICAL
+    
+    @staticmethod
+    def get_load_gradient(load_percentage: float) -> tuple:
+        """Get gradient colors based on load percentage."""
+        if load_percentage < 0.4:
+            return ModernColors.GRADIENT_SUCCESS
+        elif load_percentage < 0.7:
+            return ModernColors.GRADIENT_WARNING
+        else:
+            return ModernColors.GRADIENT_DANGER
     
     @staticmethod
     def get_state_color(state: ProcessState) -> str:
         """Get color for process state."""
         colors = {
-            ProcessState.NEW: ColorScheme.STATE_NEW,
-            ProcessState.READY: ColorScheme.STATE_READY,
-            ProcessState.RUNNING: ColorScheme.STATE_RUNNING,
-            ProcessState.WAITING: ColorScheme.STATE_WAITING,
-            ProcessState.COMPLETED: ColorScheme.STATE_COMPLETED,
-            ProcessState.MIGRATING: ColorScheme.STATE_MIGRATING,
+            ProcessState.NEW: ModernColors.STATE_NEW,
+            ProcessState.READY: ModernColors.STATE_READY,
+            ProcessState.RUNNING: ModernColors.STATE_RUNNING,
+            ProcessState.WAITING: ModernColors.STATE_WAITING,
+            ProcessState.COMPLETED: ModernColors.STATE_COMPLETED,
+            ProcessState.MIGRATING: ModernColors.STATE_MIGRATING,
         }
-        return colors.get(state, ColorScheme.STATE_NEW)
+        return colors.get(state, ModernColors.STATE_NEW)
     
     @staticmethod
     def get_processor_color(processor_id: int) -> str:
         """Get color for a processor."""
-        return ColorScheme.PROCESSOR_COLORS[processor_id % len(ColorScheme.PROCESSOR_COLORS)]
+        return ModernColors.PROCESSOR_COLORS[processor_id % len(ModernColors.PROCESSOR_COLORS)]
+
+
+# Alias for backward compatibility
+ColorScheme = ModernColors
 
 
 # =============================================================================
-# CUSTOM WIDGETS
+# MODERN CUSTOM WIDGETS
 # =============================================================================
 
-class LoadBar(tk.Canvas):
+class ModernLoadBar(tk.Canvas):
     """
-    Custom widget displaying processor load as a colored bar.
+    Modern animated load bar with gradient fill and rounded corners.
     
-    Visual representation of CPU utilization:
-    - Green: Low load (0-40%)
-    - Yellow: Medium load (40-70%)
-    - Red: High load (70-100%)
+    Features:
+    - Smooth gradient fills based on load level
+    - Rounded corners for modern look
+    - Animated transitions
+    - Glow effect on high load
     """
     
-    def __init__(self, parent, width=200, height=30, **kwargs):
-        super().__init__(parent, width=width, height=height, 
-                         bg=ColorScheme.PANEL_BG, highlightthickness=1,
-                         highlightbackground="#cccccc", **kwargs)
-        self.bar_width = width - 4
-        self.bar_height = height - 4
+    def __init__(self, parent, width=220, height=32, **kwargs):
+        super().__init__(parent, width=width, height=height,
+                         bg=ModernColors.BG_CARD, highlightthickness=0, **kwargs)
+        self.bar_width = width - 8
+        self.bar_height = height - 8
         self._load = 0.0
+        self._target_load = 0.0
+        self._animating = False
         self._draw_bar()
     
     def _draw_bar(self):
-        """Draw the load bar."""
+        """Draw the modern load bar with gradient."""
         self.delete("all")
         
-        # Background
-        self.create_rectangle(2, 2, self.bar_width + 2, self.bar_height + 2,
-                             fill="#e0e0e0", outline="")
+        # Draw background with rounded corners
+        self._draw_rounded_rect(4, 4, self.bar_width + 4, self.bar_height + 4,
+                               radius=8, fill=ModernColors.BG_INPUT, outline="")
         
-        # Load bar
+        # Draw load bar with gradient effect
         if self._load > 0:
             fill_width = int(self.bar_width * min(1.0, self._load))
-            color = ColorScheme.get_load_color(self._load)
-            self.create_rectangle(2, 2, fill_width + 2, self.bar_height + 2,
-                                 fill=color, outline="")
+            if fill_width > 2:
+                color = ModernColors.get_load_color(self._load)
+                
+                # Create gradient effect by drawing multiple rectangles
+                steps = min(fill_width, 20)
+                for i in range(steps):
+                    alpha = 0.3 + (0.7 * (i / steps))
+                    x_start = 4 + (fill_width * i // steps)
+                    x_end = 4 + (fill_width * (i + 1) // steps)
+                    self.create_rectangle(x_start, 6, x_end, self.bar_height + 2,
+                                        fill=color, outline="")
+                
+                # Add highlight at top
+                self.create_rectangle(6, 6, fill_width + 2, 10,
+                                    fill=self._lighten_color(color, 0.3), outline="")
         
-        # Percentage text
-        text = f"{self._load * 100:.1f}%"
-        self.create_text(self.bar_width // 2 + 2, self.bar_height // 2 + 2,
-                        text=text, fill=ColorScheme.TEXT, font=("Arial", 10, "bold"))
+        # Percentage text with shadow
+        text = f"{self._load * 100:.0f}%"
+        # Shadow
+        self.create_text(self.bar_width // 2 + 5, self.bar_height // 2 + 5,
+                        text=text, fill="#000000", font=("Segoe UI", 11, "bold"))
+        # Main text
+        self.create_text(self.bar_width // 2 + 4, self.bar_height // 2 + 4,
+                        text=text, fill=ModernColors.TEXT_PRIMARY, 
+                        font=("Segoe UI", 11, "bold"))
     
-    def set_load(self, load: float):
+    def _draw_rounded_rect(self, x1, y1, x2, y2, radius=10, **kwargs):
+        """Draw a rounded rectangle."""
+        points = [
+            x1 + radius, y1,
+            x2 - radius, y1,
+            x2, y1,
+            x2, y1 + radius,
+            x2, y2 - radius,
+            x2, y2,
+            x2 - radius, y2,
+            x1 + radius, y2,
+            x1, y2,
+            x1, y2 - radius,
+            x1, y1 + radius,
+            x1, y1,
+        ]
+        return self.create_polygon(points, smooth=True, **kwargs)
+    
+    def _lighten_color(self, color: str, factor: float) -> str:
+        """Lighten a hex color."""
+        color = color.lstrip('#')
+        r, g, b = int(color[:2], 16), int(color[2:4], 16), int(color[4:], 16)
+        r = min(255, int(r + (255 - r) * factor))
+        g = min(255, int(g + (255 - g) * factor))
+        b = min(255, int(b + (255 - b) * factor))
+        return f"#{r:02x}{g:02x}{b:02x}"
+    
+    def set_load(self, load: float, animate: bool = False):
         """Set the load value (0.0 to 1.0)."""
         self._load = max(0.0, min(1.0, load))
         self._draw_bar()
 
 
-class ProcessorWidget(ttk.Frame):
+class ModernProcessorCard(tk.Frame):
     """
-    Widget displaying a single processor's status.
+    Modern card widget displaying a single processor's status.
     
-    Shows:
-    - Processor ID and name
-    - Current load bar
-    - Queue size
-    - Current running process
+    Features:
+    - Elevated card design with subtle shadow effect
+    - LED status indicator
+    - Modern typography
+    - Animated load visualization
     """
     
     def __init__(self, parent, processor_id: int, **kwargs):
-        super().__init__(parent, **kwargs)
+        super().__init__(parent, bg=ModernColors.BG_CARD, **kwargs)
         self.processor_id = processor_id
+        self.configure(highlightbackground=ModernColors.BG_CARD_HOVER,
+                      highlightthickness=1)
         self._create_widgets()
     
     def _create_widgets(self):
-        """Create the processor display widgets."""
-        # Header with processor ID
-        header_frame = ttk.Frame(self)
-        header_frame.pack(fill=tk.X, padx=5, pady=2)
+        """Create the modern processor display widgets."""
+        # Main container with padding
+        container = tk.Frame(self, bg=ModernColors.BG_CARD, padx=12, pady=10)
+        container.pack(fill=tk.BOTH, expand=True)
         
-        color = ColorScheme.get_processor_color(self.processor_id)
-        self.id_label = tk.Label(header_frame, text=f"P{self.processor_id}",
-                                  font=("Arial", 12, "bold"), fg=color)
-        self.id_label.pack(side=tk.LEFT)
+        # Header row with processor ID and status LED
+        header_frame = tk.Frame(container, bg=ModernColors.BG_CARD)
+        header_frame.pack(fill=tk.X, pady=(0, 8))
         
-        self.status_label = ttk.Label(header_frame, text="Idle",
-                                       font=("Arial", 10))
+        # Processor icon/badge
+        color = ModernColors.get_processor_color(self.processor_id)
+        self.badge = tk.Label(header_frame, text=f"CPU {self.processor_id}",
+                              font=("Segoe UI", 12, "bold"), fg=color,
+                              bg=ModernColors.BG_CARD)
+        self.badge.pack(side=tk.LEFT)
+        
+        # Status LED indicator
+        self.led_canvas = tk.Canvas(header_frame, width=12, height=12,
+                                     bg=ModernColors.BG_CARD, highlightthickness=0)
+        self.led_canvas.pack(side=tk.RIGHT, padx=(0, 5))
+        self._draw_led(ModernColors.TEXT_MUTED)
+        
+        # Status text
+        self.status_label = tk.Label(header_frame, text="Idle",
+                                      font=("Segoe UI", 10),
+                                      fg=ModernColors.TEXT_SECONDARY,
+                                      bg=ModernColors.BG_CARD)
         self.status_label.pack(side=tk.RIGHT)
         
-        # Load bar
-        self.load_bar = LoadBar(self, width=180, height=25)
-        self.load_bar.pack(padx=5, pady=2)
+        # Modern load bar
+        self.load_bar = ModernLoadBar(container, width=200, height=28)
+        self.load_bar.pack(pady=(0, 8))
         
-        # Info row
-        info_frame = ttk.Frame(self)
-        info_frame.pack(fill=tk.X, padx=5, pady=2)
+        # Stats row with icons
+        stats_frame = tk.Frame(container, bg=ModernColors.BG_CARD)
+        stats_frame.pack(fill=tk.X)
         
-        self.queue_label = ttk.Label(info_frame, text="Queue: 0",
-                                      font=("Arial", 9))
-        self.queue_label.pack(side=tk.LEFT)
+        # Queue indicator
+        queue_frame = tk.Frame(stats_frame, bg=ModernColors.BG_CARD)
+        queue_frame.pack(side=tk.LEFT)
         
-        self.current_label = ttk.Label(info_frame, text="Running: -",
-                                        font=("Arial", 9))
-        self.current_label.pack(side=tk.RIGHT)
+        tk.Label(queue_frame, text="📋", font=("Segoe UI", 10),
+                bg=ModernColors.BG_CARD).pack(side=tk.LEFT)
+        self.queue_label = tk.Label(queue_frame, text="0",
+                                     font=("Segoe UI", 10, "bold"),
+                                     fg=ModernColors.TEXT_PRIMARY,
+                                     bg=ModernColors.BG_CARD)
+        self.queue_label.pack(side=tk.LEFT, padx=(2, 0))
+        
+        # Current process indicator
+        current_frame = tk.Frame(stats_frame, bg=ModernColors.BG_CARD)
+        current_frame.pack(side=tk.RIGHT)
+        
+        tk.Label(current_frame, text="▶", font=("Segoe UI", 10),
+                fg=ModernColors.SUCCESS, bg=ModernColors.BG_CARD).pack(side=tk.LEFT)
+        self.current_label = tk.Label(current_frame, text="—",
+                                       font=("Segoe UI", 10, "bold"),
+                                       fg=ModernColors.TEXT_PRIMARY,
+                                       bg=ModernColors.BG_CARD)
+        self.current_label.pack(side=tk.LEFT, padx=(2, 0))
     
-    def update_display(self, load: float, queue_size: int, 
+    def _draw_led(self, color: str, glow: bool = False):
+        """Draw LED status indicator."""
+        self.led_canvas.delete("all")
+        # Glow effect for active state
+        if glow:
+            self.led_canvas.create_oval(1, 1, 11, 11, fill=color, outline="")
+        # Main LED
+        self.led_canvas.create_oval(2, 2, 10, 10, fill=color, outline=color)
+        # Highlight
+        self.led_canvas.create_oval(3, 3, 6, 6, fill=self._lighten(color), outline="")
+    
+    def _lighten(self, color: str) -> str:
+        """Lighten a color for highlight effect."""
+        color = color.lstrip('#')
+        r, g, b = int(color[:2], 16), int(color[2:4], 16), int(color[4:], 16)
+        r = min(255, r + 60)
+        g = min(255, g + 60)
+        b = min(255, b + 60)
+        return f"#{r:02x}{g:02x}{b:02x}"
+    
+    def update_display(self, load: float, queue_size: int,
                        current_process: Optional[int], utilization: float):
-        """Update the processor display."""
+        """Update the processor display with animation."""
         self.load_bar.set_load(utilization)
-        self.queue_label.config(text=f"Queue: {queue_size}")
+        self.queue_label.config(text=str(queue_size))
         
         if current_process is not None:
-            self.current_label.config(text=f"Running: P{current_process}")
-            self.status_label.config(text="Active")
+            self.current_label.config(text=f"P{current_process}")
+            self.status_label.config(text="Active", fg=ModernColors.SUCCESS)
+            self._draw_led(ModernColors.SUCCESS, glow=True)
         else:
-            self.current_label.config(text="Running: -")
-            self.status_label.config(text="Idle")
+            self.current_label.config(text="—")
+            self.status_label.config(text="Idle", fg=ModernColors.TEXT_MUTED)
+            self._draw_led(ModernColors.TEXT_MUTED)
 
 
-class MetricCard(ttk.Frame):
+class ModernMetricCard(tk.Frame):
     """
-    Card widget displaying a single metric with label and value.
+    Modern metric card with icon and styled value display.
     """
     
-    def __init__(self, parent, label: str, value: str = "0", **kwargs):
-        super().__init__(parent, **kwargs)
-        self._create_widgets(label, value)
+    def __init__(self, parent, label: str, value: str = "0", 
+                 icon: str = "📊", accent_color: str = None, **kwargs):
+        super().__init__(parent, bg=ModernColors.BG_CARD, **kwargs)
+        self.accent = accent_color or ModernColors.PRIMARY
+        self.configure(highlightbackground=ModernColors.BG_CARD_HOVER,
+                      highlightthickness=1)
+        self._create_widgets(label, value, icon)
     
-    def _create_widgets(self, label: str, value: str):
-        """Create the metric card widgets."""
-        self.configure(relief="groove", borderwidth=1, padding=5)
+    def _create_widgets(self, label: str, value: str, icon: str):
+        """Create the modern metric card widgets."""
+        container = tk.Frame(self, bg=ModernColors.BG_CARD, padx=15, pady=12)
+        container.pack(fill=tk.BOTH, expand=True)
         
-        self.label = ttk.Label(self, text=label, font=("Arial", 9))
-        self.label.pack(anchor=tk.W)
+        # Top row with icon and label
+        header = tk.Frame(container, bg=ModernColors.BG_CARD)
+        header.pack(fill=tk.X)
         
-        self.value_label = ttk.Label(self, text=value, 
-                                      font=("Arial", 14, "bold"))
-        self.value_label.pack(anchor=tk.W)
+        tk.Label(header, text=icon, font=("Segoe UI", 14),
+                bg=ModernColors.BG_CARD).pack(side=tk.LEFT)
+        
+        self.label = tk.Label(header, text=label, font=("Segoe UI", 10),
+                              fg=ModernColors.TEXT_SECONDARY,
+                              bg=ModernColors.BG_CARD)
+        self.label.pack(side=tk.LEFT, padx=(8, 0))
+        
+        # Value with accent color
+        self.value_label = tk.Label(container, text=value,
+                                     font=("Segoe UI", 20, "bold"),
+                                     fg=self.accent,
+                                     bg=ModernColors.BG_CARD)
+        self.value_label.pack(anchor=tk.W, pady=(8, 0))
     
     def set_value(self, value: str):
         """Update the displayed value."""
         self.value_label.config(text=value)
 
 
+class ModernButton(tk.Button):
+    """
+    Modern styled button with hover effects.
+    """
+    
+    def __init__(self, parent, text: str, command=None, 
+                 style: str = "primary", icon: str = "", **kwargs):
+        self.style = style
+        self.colors = self._get_style_colors()
+        
+        super().__init__(
+            parent,
+            text=f"{icon} {text}".strip(),
+            command=command,
+            font=("Segoe UI", 10, "bold"),
+            fg=self.colors['fg'],
+            bg=self.colors['bg'],
+            activeforeground=self.colors['fg'],
+            activebackground=self.colors['hover'],
+            relief=tk.FLAT,
+            cursor="hand2",
+            padx=16,
+            pady=8,
+            **kwargs
+        )
+        
+        # Bind hover events
+        self.bind("<Enter>", self._on_enter)
+        self.bind("<Leave>", self._on_leave)
+    
+    def _get_style_colors(self) -> dict:
+        """Get colors based on button style."""
+        styles = {
+            'primary': {'bg': ModernColors.PRIMARY, 'fg': '#ffffff', 
+                       'hover': '#3651d4'},
+            'success': {'bg': ModernColors.SUCCESS, 'fg': '#ffffff', 
+                       'hover': '#05c090'},
+            'danger': {'bg': ModernColors.DANGER, 'fg': '#ffffff', 
+                      'hover': '#dc3d5f'},
+            'warning': {'bg': ModernColors.WARNING, 'fg': '#1a1a2e', 
+                       'hover': '#eec44e'},
+            'secondary': {'bg': ModernColors.BG_CARD_HOVER, 
+                         'fg': ModernColors.TEXT_PRIMARY, 
+                         'hover': '#303050'},
+        }
+        return styles.get(self.style, styles['primary'])
+    
+    def _on_enter(self, event):
+        """Handle mouse enter."""
+        self.config(bg=self.colors['hover'])
+    
+    def _on_leave(self, event):
+        """Handle mouse leave."""
+        self.config(bg=self.colors['bg'])
+
+
+# Legacy widget aliases for compatibility
+class LoadBar(ModernLoadBar):
+    """Backward compatible alias for ModernLoadBar."""
+    pass
+
+
+class ProcessorWidget(ModernProcessorCard):
+    """Backward compatible alias for ModernProcessorCard."""
+    pass
+
+
+class MetricCard(ModernMetricCard):
+    """Backward compatible alias for ModernMetricCard."""
+    def __init__(self, parent, label: str, value: str = "0", **kwargs):
+        super().__init__(parent, label, value, icon="", **kwargs)
+
+
 # =============================================================================
-# MAIN GUI CLASS
+# MAIN GUI CLASS - MODERN DESIGN
 # =============================================================================
 
 class LoadBalancerGUI:
     """
-    Main GUI application for the Dynamic Load Balancing Simulator.
+    Modern GUI application for the Dynamic Load Balancing Simulator.
     
-    This class manages:
-    - Main window and layout
-    - Control panel for configuration
-    - Real-time visualization of processors
-    - Gantt chart for process execution
-    - Metrics dashboard
-    - Thread-safe simulation updates
+    Features:
+    - Dark theme with modern aesthetics
+    - Card-based layout with elevation effects
+    - Smooth animations and transitions
+    - Professional color scheme
+    - Responsive design
     
     Thread Safety:
     The GUI runs on the main thread while simulation runs in a background
@@ -298,12 +516,15 @@ class LoadBalancerGUI:
     """
     
     def __init__(self):
-        """Initialize the GUI application."""
+        """Initialize the modern GUI application."""
         # Create main window
         self.root = tk.Tk()
-        self.root.title(f"{APP_NAME} v{VERSION}")
-        self.root.geometry("1400x900")
-        self.root.minsize(1200, 700)
+        self.root.title(f"⚡ {APP_NAME} v{VERSION}")
+        self.root.geometry("1500x950")
+        self.root.minsize(1300, 800)
+        
+        # Set dark theme background
+        self.root.configure(bg=ModernColors.BG_DARK)
         
         # Configuration
         self.config = DEFAULT_SIMULATION_CONFIG
@@ -321,16 +542,16 @@ class LoadBalancerGUI:
         self.is_paused = False
         
         # Processor widgets
-        self.processor_widgets: List[ProcessorWidget] = []
+        self.processor_widgets: List[ModernProcessorCard] = []
         
         # Metric cards
-        self.metric_cards: Dict[str, MetricCard] = {}
+        self.metric_cards: Dict[str, ModernMetricCard] = {}
         
         # Gantt chart data
         self.gantt_data: List[Dict] = []
         
         # Create GUI components
-        self._create_styles()
+        self._configure_styles()
         self._create_menu()
         self._create_main_layout()
         
@@ -340,71 +561,153 @@ class LoadBalancerGUI:
         # Start update loop
         self._process_updates()
     
-    def _create_styles(self):
-        """Configure ttk styles for the application."""
+    def _configure_styles(self):
+        """Configure modern ttk styles."""
         style = ttk.Style()
-        style.theme_use('clam')
         
-        # Configure frame styles
-        style.configure("Panel.TFrame", background=ColorScheme.PANEL_BG)
-        style.configure("Header.TLabel", font=("Arial", 14, "bold"))
-        style.configure("SubHeader.TLabel", font=("Arial", 11, "bold"))
+        # Try to use a modern theme
+        try:
+            style.theme_use('clam')
+        except:
+            pass
         
-        # Button styles
-        style.configure("Start.TButton", foreground=ColorScheme.BUTTON_START)
-        style.configure("Stop.TButton", foreground=ColorScheme.BUTTON_STOP)
-        style.configure("Pause.TButton", foreground=ColorScheme.BUTTON_PAUSE)
-        style.configure("Reset.TButton", foreground=ColorScheme.BUTTON_RESET)
+        # Configure colors for dark theme
+        style.configure(".", 
+                       background=ModernColors.BG_DARK,
+                       foreground=ModernColors.TEXT_PRIMARY,
+                       fieldbackground=ModernColors.BG_INPUT)
+        
+        style.configure("TFrame", background=ModernColors.BG_DARK)
+        style.configure("Card.TFrame", background=ModernColors.BG_CARD)
+        
+        style.configure("TLabel",
+                       background=ModernColors.BG_DARK,
+                       foreground=ModernColors.TEXT_PRIMARY,
+                       font=("Segoe UI", 10))
+        
+        style.configure("Header.TLabel",
+                       font=("Segoe UI", 16, "bold"),
+                       foreground=ModernColors.TEXT_PRIMARY)
+        
+        style.configure("SubHeader.TLabel",
+                       font=("Segoe UI", 12, "bold"),
+                       foreground=ModernColors.TEXT_SECONDARY)
+        
+        style.configure("TLabelframe",
+                       background=ModernColors.BG_CARD,
+                       foreground=ModernColors.TEXT_PRIMARY)
+        style.configure("TLabelframe.Label",
+                       background=ModernColors.BG_CARD,
+                       foreground=ModernColors.PRIMARY,
+                       font=("Segoe UI", 11, "bold"))
+        
+        # Entry/Spinbox styles
+        style.configure("TEntry",
+                       fieldbackground=ModernColors.BG_INPUT,
+                       foreground=ModernColors.TEXT_PRIMARY)
+        
+        style.configure("TSpinbox",
+                       fieldbackground=ModernColors.BG_INPUT,
+                       foreground=ModernColors.TEXT_PRIMARY,
+                       arrowcolor=ModernColors.TEXT_PRIMARY)
+        
+        # Combobox style
+        style.configure("TCombobox",
+                       fieldbackground=ModernColors.BG_INPUT,
+                       foreground=ModernColors.TEXT_PRIMARY,
+                       arrowcolor=ModernColors.TEXT_PRIMARY)
+        style.map("TCombobox",
+                 fieldbackground=[('readonly', ModernColors.BG_INPUT)],
+                 selectbackground=[('readonly', ModernColors.PRIMARY)])
+        
+        # Progress bar style
+        style.configure("TProgressbar",
+                       background=ModernColors.PRIMARY,
+                       troughcolor=ModernColors.BG_INPUT,
+                       bordercolor=ModernColors.BG_INPUT,
+                       lightcolor=ModernColors.PRIMARY,
+                       darkcolor=ModernColors.PRIMARY)
+        
+        # Treeview style
+        style.configure("Treeview",
+                       background=ModernColors.BG_CARD,
+                       foreground=ModernColors.TEXT_PRIMARY,
+                       fieldbackground=ModernColors.BG_CARD,
+                       font=("Segoe UI", 9))
+        style.configure("Treeview.Heading",
+                       background=ModernColors.BG_CARD_HOVER,
+                       foreground=ModernColors.TEXT_PRIMARY,
+                       font=("Segoe UI", 10, "bold"))
+        style.map("Treeview",
+                 background=[('selected', ModernColors.PRIMARY)],
+                 foreground=[('selected', '#ffffff')])
+        
+        # Scale style
+        style.configure("TScale",
+                       background=ModernColors.BG_DARK,
+                       troughcolor=ModernColors.BG_INPUT)
     
     def _create_menu(self):
-        """Create the application menu bar."""
-        menubar = tk.Menu(self.root)
+        """Create the modern application menu bar."""
+        menubar = tk.Menu(self.root, bg=ModernColors.BG_CARD, 
+                         fg=ModernColors.TEXT_PRIMARY,
+                         activebackground=ModernColors.PRIMARY,
+                         activeforeground='#ffffff')
         self.root.config(menu=menubar)
         
         # File menu
-        file_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="File", menu=file_menu)
-        file_menu.add_command(label="Export Results...", command=self._export_results)
-        file_menu.add_command(label="Save Configuration...", command=self._save_config)
-        file_menu.add_command(label="Load Configuration...", command=self._load_config)
+        file_menu = tk.Menu(menubar, tearoff=0, bg=ModernColors.BG_CARD,
+                           fg=ModernColors.TEXT_PRIMARY,
+                           activebackground=ModernColors.PRIMARY)
+        menubar.add_cascade(label="📁 File", menu=file_menu)
+        file_menu.add_command(label="📤 Export Results...", command=self._export_results)
+        file_menu.add_command(label="💾 Save Configuration...", command=self._save_config)
+        file_menu.add_command(label="📂 Load Configuration...", command=self._load_config)
         file_menu.add_separator()
-        file_menu.add_command(label="Exit", command=self._on_close)
+        file_menu.add_command(label="🚪 Exit", command=self._on_close)
         
         # Simulation menu
-        sim_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Simulation", menu=sim_menu)
-        sim_menu.add_command(label="Start", command=self._start_simulation)
-        sim_menu.add_command(label="Pause/Resume", command=self._toggle_pause)
-        sim_menu.add_command(label="Stop", command=self._stop_simulation)
-        sim_menu.add_command(label="Reset", command=self._reset_simulation)
+        sim_menu = tk.Menu(menubar, tearoff=0, bg=ModernColors.BG_CARD,
+                          fg=ModernColors.TEXT_PRIMARY,
+                          activebackground=ModernColors.PRIMARY)
+        menubar.add_cascade(label="⚙️ Simulation", menu=sim_menu)
+        sim_menu.add_command(label="▶️ Start", command=self._start_simulation)
+        sim_menu.add_command(label="⏸️ Pause/Resume", command=self._toggle_pause)
+        sim_menu.add_command(label="⏹️ Stop", command=self._stop_simulation)
+        sim_menu.add_command(label="🔄 Reset", command=self._reset_simulation)
         sim_menu.add_separator()
-        sim_menu.add_command(label="Compare Algorithms", command=self._compare_algorithms)
+        sim_menu.add_command(label="📊 Compare Algorithms", command=self._compare_algorithms)
         
         # Help menu
-        help_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Help", menu=help_menu)
-        help_menu.add_command(label="About", command=self._show_about)
-        help_menu.add_command(label="Algorithm Info", command=self._show_algorithm_info)
+        help_menu = tk.Menu(menubar, tearoff=0, bg=ModernColors.BG_CARD,
+                           fg=ModernColors.TEXT_PRIMARY,
+                           activebackground=ModernColors.PRIMARY)
+        menubar.add_cascade(label="❓ Help", menu=help_menu)
+        help_menu.add_command(label="ℹ️ About", command=self._show_about)
+        help_menu.add_command(label="📖 Algorithm Info", command=self._show_algorithm_info)
     
     def _create_main_layout(self):
-        """Create the main window layout."""
-        # Main container
-        main_frame = ttk.Frame(self.root, padding=10)
+        """Create the modern main window layout."""
+        # Main container with padding
+        main_frame = tk.Frame(self.root, bg=ModernColors.BG_DARK, padx=15, pady=15)
         main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Header with title
+        self._create_header(main_frame)
         
         # Top section: Control Panel
         self._create_control_panel(main_frame)
         
-        # Middle section: Visualization (Processors + Gantt Chart)
-        middle_frame = ttk.Frame(main_frame)
-        middle_frame.pack(fill=tk.BOTH, expand=True, pady=10)
+        # Middle section: Visualization (Processors + Charts)
+        middle_frame = tk.Frame(main_frame, bg=ModernColors.BG_DARK)
+        middle_frame.pack(fill=tk.BOTH, expand=True, pady=15)
         
-        # Left: Processors
+        # Left: Processors Panel
         self._create_processor_panel(middle_frame)
         
-        # Right: Gantt Chart and Process Table
-        right_frame = ttk.Frame(middle_frame)
-        right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(10, 0))
+        # Right: Charts and Process Table
+        right_frame = tk.Frame(middle_frame, bg=ModernColors.BG_DARK)
+        right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(15, 0))
         
         self._create_gantt_chart(right_frame)
         self._create_process_table(right_frame)
@@ -412,108 +715,233 @@ class LoadBalancerGUI:
         # Bottom section: Metrics Dashboard
         self._create_metrics_panel(main_frame)
     
+    def _create_header(self, parent):
+        """Create the header section with title and status."""
+        header_frame = tk.Frame(parent, bg=ModernColors.BG_DARK)
+        header_frame.pack(fill=tk.X, pady=(0, 15))
+        
+        # Title with icon
+        title_frame = tk.Frame(header_frame, bg=ModernColors.BG_DARK)
+        title_frame.pack(side=tk.LEFT)
+        
+        tk.Label(title_frame, text="⚡", font=("Segoe UI", 24),
+                bg=ModernColors.BG_DARK, fg=ModernColors.PRIMARY).pack(side=tk.LEFT)
+        
+        tk.Label(title_frame, text=APP_NAME,
+                font=("Segoe UI", 20, "bold"),
+                bg=ModernColors.BG_DARK,
+                fg=ModernColors.TEXT_PRIMARY).pack(side=tk.LEFT, padx=(10, 0))
+        
+        tk.Label(title_frame, text=f"v{VERSION}",
+                font=("Segoe UI", 12),
+                bg=ModernColors.BG_DARK,
+                fg=ModernColors.TEXT_MUTED).pack(side=tk.LEFT, padx=(10, 0), pady=(8, 0))
+    
     def _create_control_panel(self, parent):
-        """Create the control panel with configuration options."""
-        panel = ttk.LabelFrame(parent, text="Control Panel", padding=10)
+        """Create the modern control panel with configuration options."""
+        # Card container
+        panel = tk.Frame(parent, bg=ModernColors.BG_CARD,
+                        highlightbackground=ModernColors.BG_CARD_HOVER,
+                        highlightthickness=1)
         panel.pack(fill=tk.X)
         
+        inner = tk.Frame(panel, bg=ModernColors.BG_CARD, padx=20, pady=15)
+        inner.pack(fill=tk.X)
+        
+        # Section title
+        title_row = tk.Frame(inner, bg=ModernColors.BG_CARD)
+        title_row.pack(fill=tk.X, pady=(0, 15))
+        
+        tk.Label(title_row, text="🎮 Control Panel",
+                font=("Segoe UI", 14, "bold"),
+                bg=ModernColors.BG_CARD,
+                fg=ModernColors.PRIMARY).pack(side=tk.LEFT)
+        
         # Configuration row
-        config_frame = ttk.Frame(panel)
-        config_frame.pack(fill=tk.X, pady=(0, 10))
+        config_frame = tk.Frame(inner, bg=ModernColors.BG_CARD)
+        config_frame.pack(fill=tk.X, pady=(0, 15))
         
-        # Number of Processors
-        ttk.Label(config_frame, text="Processors:").pack(side=tk.LEFT, padx=(0, 5))
-        self.processors_var = tk.IntVar(value=self.config.num_processors)
-        processors_spin = ttk.Spinbox(config_frame, from_=2, to=8, width=5,
-                                       textvariable=self.processors_var)
-        processors_spin.pack(side=tk.LEFT, padx=(0, 20))
+        # Processors input
+        self._create_config_input(config_frame, "🖥️ Processors", "processors",
+                                  2, 16, self.config.num_processors)
         
-        # Number of Processes
-        ttk.Label(config_frame, text="Processes:").pack(side=tk.LEFT, padx=(0, 5))
-        self.processes_var = tk.IntVar(value=self.config.num_processes)
-        processes_spin = ttk.Spinbox(config_frame, from_=5, to=100, width=5,
-                                      textvariable=self.processes_var)
-        processes_spin.pack(side=tk.LEFT, padx=(0, 20))
+        # Processes input
+        self._create_config_input(config_frame, "📦 Processes", "processes",
+                                  5, 100, self.config.num_processes)
         
-        # Time Quantum
-        ttk.Label(config_frame, text="Time Quantum:").pack(side=tk.LEFT, padx=(0, 5))
-        self.quantum_var = tk.IntVar(value=self.config.time_quantum)
-        quantum_spin = ttk.Spinbox(config_frame, from_=1, to=20, width=5,
-                                    textvariable=self.quantum_var)
-        quantum_spin.pack(side=tk.LEFT, padx=(0, 20))
+        # Time Quantum input
+        self._create_config_input(config_frame, "⏱️ Time Quantum", "quantum",
+                                  1, 20, self.config.time_quantum)
         
-        # Algorithm Selection
-        ttk.Label(config_frame, text="Algorithm:").pack(side=tk.LEFT, padx=(0, 5))
+        # Algorithm selection
+        algo_frame = tk.Frame(config_frame, bg=ModernColors.BG_CARD)
+        algo_frame.pack(side=tk.LEFT, padx=(0, 30))
+        
+        tk.Label(algo_frame, text="🔀 Algorithm",
+                font=("Segoe UI", 10),
+                bg=ModernColors.BG_CARD,
+                fg=ModernColors.TEXT_SECONDARY).pack(anchor=tk.W)
+        
         self.algorithm_var = tk.StringVar(value=self.config.default_algorithm.value)
-        algorithm_combo = ttk.Combobox(config_frame, textvariable=self.algorithm_var,
+        algorithm_combo = ttk.Combobox(algo_frame, textvariable=self.algorithm_var,
                                         values=[a.value for a in LoadBalancingAlgorithm],
-                                        state="readonly", width=20)
-        algorithm_combo.pack(side=tk.LEFT, padx=(0, 20))
+                                        state="readonly", width=18,
+                                        font=("Segoe UI", 10))
+        algorithm_combo.pack(pady=(5, 0))
         
-        # Speed slider
-        ttk.Label(config_frame, text="Speed:").pack(side=tk.LEFT, padx=(0, 5))
+        # Speed control
+        speed_frame = tk.Frame(config_frame, bg=ModernColors.BG_CARD)
+        speed_frame.pack(side=tk.LEFT, padx=(0, 30))
+        
+        tk.Label(speed_frame, text="⚡ Speed",
+                font=("Segoe UI", 10),
+                bg=ModernColors.BG_CARD,
+                fg=ModernColors.TEXT_SECONDARY).pack(anchor=tk.W)
+        
+        speed_inner = tk.Frame(speed_frame, bg=ModernColors.BG_CARD)
+        speed_inner.pack(pady=(5, 0))
+        
         self.speed_var = tk.IntVar(value=50)
-        speed_scale = ttk.Scale(config_frame, from_=1, to=100, orient=tk.HORIZONTAL,
-                                 variable=self.speed_var, length=100)
-        speed_scale.pack(side=tk.LEFT, padx=(0, 5))
-        self.speed_label = ttk.Label(config_frame, text="50%")
-        self.speed_label.pack(side=tk.LEFT)
+        speed_scale = ttk.Scale(speed_inner, from_=1, to=100, orient=tk.HORIZONTAL,
+                                 variable=self.speed_var, length=120)
+        speed_scale.pack(side=tk.LEFT)
+        
+        self.speed_label = tk.Label(speed_inner, text="50%",
+                                    font=("Segoe UI", 10, "bold"),
+                                    bg=ModernColors.BG_CARD,
+                                    fg=ModernColors.PRIMARY,
+                                    width=5)
+        self.speed_label.pack(side=tk.LEFT, padx=(5, 0))
         speed_scale.bind("<Motion>", self._update_speed_label)
+        speed_scale.bind("<ButtonRelease-1>", self._update_speed_label)
         
         # Control buttons row
-        button_frame = ttk.Frame(panel)
+        button_frame = tk.Frame(inner, bg=ModernColors.BG_CARD)
         button_frame.pack(fill=tk.X)
         
-        self.start_btn = ttk.Button(button_frame, text="▶ Start", 
-                                     command=self._start_simulation, width=12)
-        self.start_btn.pack(side=tk.LEFT, padx=5)
+        # Action buttons
+        self.start_btn = ModernButton(button_frame, "Start", self._start_simulation,
+                                       style="success", icon="▶")
+        self.start_btn.pack(side=tk.LEFT, padx=(0, 10))
         
-        self.pause_btn = ttk.Button(button_frame, text="⏸ Pause",
-                                     command=self._toggle_pause, width=12,
-                                     state=tk.DISABLED)
-        self.pause_btn.pack(side=tk.LEFT, padx=5)
+        self.pause_btn = ModernButton(button_frame, "Pause", self._toggle_pause,
+                                       style="warning", icon="⏸")
+        self.pause_btn.pack(side=tk.LEFT, padx=(0, 10))
+        self.pause_btn.config(state=tk.DISABLED)
         
-        self.stop_btn = ttk.Button(button_frame, text="⏹ Stop",
-                                    command=self._stop_simulation, width=12,
-                                    state=tk.DISABLED)
-        self.stop_btn.pack(side=tk.LEFT, padx=5)
+        self.stop_btn = ModernButton(button_frame, "Stop", self._stop_simulation,
+                                      style="danger", icon="⏹")
+        self.stop_btn.pack(side=tk.LEFT, padx=(0, 10))
+        self.stop_btn.config(state=tk.DISABLED)
         
-        self.reset_btn = ttk.Button(button_frame, text="↺ Reset",
-                                     command=self._reset_simulation, width=12)
-        self.reset_btn.pack(side=tk.LEFT, padx=5)
+        self.reset_btn = ModernButton(button_frame, "Reset", self._reset_simulation,
+                                       style="secondary", icon="↺")
+        self.reset_btn.pack(side=tk.LEFT, padx=(0, 20))
         
-        ttk.Separator(button_frame, orient=tk.VERTICAL).pack(side=tk.LEFT, 
-                                                               fill=tk.Y, padx=10)
+        # Separator
+        sep = tk.Frame(button_frame, bg=ModernColors.TEXT_MUTED, width=2, height=35)
+        sep.pack(side=tk.LEFT, padx=(0, 20))
         
-        self.compare_btn = ttk.Button(button_frame, text="📊 Compare Algorithms",
-                                       command=self._compare_algorithms, width=18)
-        self.compare_btn.pack(side=tk.LEFT, padx=5)
+        self.compare_btn = ModernButton(button_frame, "Compare Algorithms",
+                                         self._compare_algorithms,
+                                         style="primary", icon="📊")
+        self.compare_btn.pack(side=tk.LEFT)
         
-        # Status bar
-        status_frame = ttk.Frame(panel)
-        status_frame.pack(fill=tk.X, pady=(10, 0))
+        # Status section
+        status_frame = tk.Frame(inner, bg=ModernColors.BG_CARD)
+        status_frame.pack(fill=tk.X, pady=(15, 0))
         
-        self.status_label = ttk.Label(status_frame, text="Status: Ready",
-                                       font=("Arial", 10))
-        self.status_label.pack(side=tk.LEFT)
+        # Status indicator
+        status_left = tk.Frame(status_frame, bg=ModernColors.BG_CARD)
+        status_left.pack(side=tk.LEFT)
         
-        self.time_label = ttk.Label(status_frame, text="Time: 0",
-                                     font=("Arial", 10))
-        self.time_label.pack(side=tk.RIGHT)
+        self.status_led = tk.Canvas(status_left, width=12, height=12,
+                                     bg=ModernColors.BG_CARD, highlightthickness=0)
+        self.status_led.pack(side=tk.LEFT)
+        self._draw_status_led(ModernColors.TEXT_MUTED)
+        
+        self.status_label = tk.Label(status_left, text="Ready",
+                                      font=("Segoe UI", 11, "bold"),
+                                      bg=ModernColors.BG_CARD,
+                                      fg=ModernColors.TEXT_SECONDARY)
+        self.status_label.pack(side=tk.LEFT, padx=(8, 0))
+        
+        # Time and progress
+        status_right = tk.Frame(status_frame, bg=ModernColors.BG_CARD)
+        status_right.pack(side=tk.RIGHT)
+        
+        self.time_label = tk.Label(status_right, text="⏱️ Time: 0",
+                                    font=("Segoe UI", 11),
+                                    bg=ModernColors.BG_CARD,
+                                    fg=ModernColors.TEXT_PRIMARY)
+        self.time_label.pack(side=tk.RIGHT, padx=(20, 0))
         
         self.progress_var = tk.DoubleVar(value=0)
-        self.progress_bar = ttk.Progressbar(status_frame, variable=self.progress_var,
-                                             maximum=100, length=200)
-        self.progress_bar.pack(side=tk.RIGHT, padx=10)
+        self.progress_bar = ttk.Progressbar(status_right, variable=self.progress_var,
+                                             maximum=100, length=250, mode='determinate')
+        self.progress_bar.pack(side=tk.RIGHT)
+        
+        tk.Label(status_right, text="Progress:",
+                font=("Segoe UI", 10),
+                bg=ModernColors.BG_CARD,
+                fg=ModernColors.TEXT_SECONDARY).pack(side=tk.RIGHT, padx=(0, 10))
+    
+    def _create_config_input(self, parent, label: str, var_name: str,
+                            min_val: int, max_val: int, default: int):
+        """Create a modern config input field."""
+        frame = tk.Frame(parent, bg=ModernColors.BG_CARD)
+        frame.pack(side=tk.LEFT, padx=(0, 30))
+        
+        tk.Label(frame, text=label,
+                font=("Segoe UI", 10),
+                bg=ModernColors.BG_CARD,
+                fg=ModernColors.TEXT_SECONDARY).pack(anchor=tk.W)
+        
+        var = tk.IntVar(value=default)
+        setattr(self, f"{var_name}_var", var)
+        
+        spinbox = ttk.Spinbox(frame, from_=min_val, to=max_val, width=8,
+                              textvariable=var, font=("Segoe UI", 10))
+        spinbox.pack(pady=(5, 0))
+    
+    def _draw_status_led(self, color: str):
+        """Draw status LED indicator."""
+        self.status_led.delete("all")
+        self.status_led.create_oval(2, 2, 10, 10, fill=color, outline=color)
     
     def _create_processor_panel(self, parent):
-        """Create the processor visualization panel."""
-        panel = ttk.LabelFrame(parent, text="Processors", padding=10)
-        panel.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
+        """Create the modern processor visualization panel."""
+        panel = tk.Frame(parent, bg=ModernColors.BG_CARD,
+                        highlightbackground=ModernColors.BG_CARD_HOVER,
+                        highlightthickness=1)
+        panel.pack(side=tk.LEFT, fill=tk.Y)
         
-        # Container for processor widgets
-        self.processor_container = ttk.Frame(panel)
-        self.processor_container.pack(fill=tk.BOTH, expand=True)
+        inner = tk.Frame(panel, bg=ModernColors.BG_CARD, padx=15, pady=15)
+        inner.pack(fill=tk.BOTH, expand=True)
+        
+        # Header
+        tk.Label(inner, text="🖥️ Processors",
+                font=("Segoe UI", 14, "bold"),
+                bg=ModernColors.BG_CARD,
+                fg=ModernColors.PRIMARY).pack(anchor=tk.W, pady=(0, 15))
+        
+        # Scrollable container for processors
+        canvas = tk.Canvas(inner, bg=ModernColors.BG_CARD, highlightthickness=0,
+                          width=240)
+        scrollbar = ttk.Scrollbar(inner, orient="vertical", command=canvas.yview)
+        
+        self.processor_container = tk.Frame(canvas, bg=ModernColors.BG_CARD)
+        
+        canvas.create_window((0, 0), window=self.processor_container, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        def on_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+        
+        self.processor_container.bind("<Configure>", on_configure)
         
         # Create initial processor widgets
         self._create_processor_widgets()
@@ -528,55 +956,88 @@ class LoadBalancerGUI:
         # Create new widgets
         num_processors = self.processors_var.get()
         for i in range(num_processors):
-            widget = ProcessorWidget(self.processor_container, processor_id=i)
-            widget.pack(fill=tk.X, pady=5)
+            widget = ModernProcessorCard(self.processor_container, processor_id=i)
+            widget.pack(fill=tk.X, pady=(0, 10))
             self.processor_widgets.append(widget)
     
     def _create_gantt_chart(self, parent):
-        """Create the Gantt chart visualization."""
-        panel = ttk.LabelFrame(parent, text="Process Execution Timeline (Gantt Chart)", 
-                               padding=10)
+        """Create the modern Gantt chart visualization."""
+        panel = tk.Frame(parent, bg=ModernColors.BG_CARD,
+                        highlightbackground=ModernColors.BG_CARD_HOVER,
+                        highlightthickness=1)
         panel.pack(fill=tk.BOTH, expand=True)
         
-        # Create matplotlib figure
-        self.gantt_fig = Figure(figsize=(8, 3), dpi=100)
+        inner = tk.Frame(panel, bg=ModernColors.BG_CARD, padx=15, pady=15)
+        inner.pack(fill=tk.BOTH, expand=True)
+        
+        # Header
+        tk.Label(inner, text="📊 Process Execution Timeline",
+                font=("Segoe UI", 14, "bold"),
+                bg=ModernColors.BG_CARD,
+                fg=ModernColors.PRIMARY).pack(anchor=tk.W, pady=(0, 10))
+        
+        # Create matplotlib figure with dark theme
+        self.gantt_fig = Figure(figsize=(9, 3), dpi=100, facecolor=ModernColors.BG_CARD)
         self.gantt_ax = self.gantt_fig.add_subplot(111)
-        self.gantt_ax.set_xlabel("Time")
-        self.gantt_ax.set_ylabel("Processor")
+        self._style_chart_axes(self.gantt_ax)
         self.gantt_fig.tight_layout()
         
         # Embed in Tkinter
-        self.gantt_canvas = FigureCanvasTkAgg(self.gantt_fig, master=panel)
+        self.gantt_canvas = FigureCanvasTkAgg(self.gantt_fig, master=inner)
         self.gantt_canvas.draw()
         self.gantt_canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
     
+    def _style_chart_axes(self, ax):
+        """Apply modern dark styling to chart axes."""
+        ax.set_facecolor(ModernColors.BG_CARD)
+        ax.tick_params(colors=ModernColors.TEXT_SECONDARY, labelsize=9)
+        ax.spines['bottom'].set_color(ModernColors.TEXT_MUTED)
+        ax.spines['top'].set_color(ModernColors.BG_CARD)
+        ax.spines['left'].set_color(ModernColors.TEXT_MUTED)
+        ax.spines['right'].set_color(ModernColors.BG_CARD)
+        ax.xaxis.label.set_color(ModernColors.TEXT_SECONDARY)
+        ax.yaxis.label.set_color(ModernColors.TEXT_SECONDARY)
+        ax.set_xlabel("Time", fontsize=10, fontfamily='Segoe UI')
+        ax.set_ylabel("Processor", fontsize=10, fontfamily='Segoe UI')
+    
     def _create_process_table(self, parent):
-        """Create the process table display."""
-        panel = ttk.LabelFrame(parent, text="Process Details", padding=10)
-        panel.pack(fill=tk.BOTH, expand=True, pady=(10, 0))
+        """Create the modern process table display."""
+        panel = tk.Frame(parent, bg=ModernColors.BG_CARD,
+                        highlightbackground=ModernColors.BG_CARD_HOVER,
+                        highlightthickness=1)
+        panel.pack(fill=tk.BOTH, expand=True, pady=(15, 0))
+        
+        inner = tk.Frame(panel, bg=ModernColors.BG_CARD, padx=15, pady=15)
+        inner.pack(fill=tk.BOTH, expand=True)
+        
+        # Header
+        tk.Label(inner, text="📋 Process Details",
+                font=("Segoe UI", 14, "bold"),
+                bg=ModernColors.BG_CARD,
+                fg=ModernColors.PRIMARY).pack(anchor=tk.W, pady=(0, 10))
         
         # Create treeview with scrollbar
-        tree_frame = ttk.Frame(panel)
+        tree_frame = tk.Frame(inner, bg=ModernColors.BG_CARD)
         tree_frame.pack(fill=tk.BOTH, expand=True)
         
-        columns = ("PID", "Arrival", "Burst", "Remaining", "Priority", 
+        columns = ("PID", "Arrival", "Burst", "Remaining", "Priority",
                    "State", "Processor", "Wait", "Turnaround")
         
-        self.process_tree = ttk.Treeview(tree_frame, columns=columns, 
+        self.process_tree = ttk.Treeview(tree_frame, columns=columns,
                                           show="headings", height=8)
         
         # Configure columns
-        col_widths = {"PID": 50, "Arrival": 60, "Burst": 60, "Remaining": 70,
-                      "Priority": 70, "State": 80, "Processor": 70, 
-                      "Wait": 50, "Turnaround": 80}
+        col_widths = {"PID": 55, "Arrival": 65, "Burst": 60, "Remaining": 80,
+                      "Priority": 75, "State": 90, "Processor": 75,
+                      "Wait": 55, "Turnaround": 90}
         
         for col in columns:
             self.process_tree.heading(col, text=col)
-            self.process_tree.column(col, width=col_widths.get(col, 70), 
+            self.process_tree.column(col, width=col_widths.get(col, 70),
                                       anchor=tk.CENTER)
         
         # Scrollbars
-        vsb = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, 
+        vsb = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL,
                             command=self.process_tree.yview)
         hsb = ttk.Scrollbar(tree_frame, orient=tk.HORIZONTAL,
                             command=self.process_tree.xview)
@@ -591,54 +1052,74 @@ class LoadBalancerGUI:
         tree_frame.grid_columnconfigure(0, weight=1)
     
     def _create_metrics_panel(self, parent):
-        """Create the metrics dashboard."""
-        panel = ttk.LabelFrame(parent, text="Performance Metrics", padding=10)
-        panel.pack(fill=tk.X, pady=(0, 0))
+        """Create the modern metrics dashboard."""
+        panel = tk.Frame(parent, bg=ModernColors.BG_CARD,
+                        highlightbackground=ModernColors.BG_CARD_HOVER,
+                        highlightthickness=1)
+        panel.pack(fill=tk.X)
         
-        # Metrics grid
-        metrics_frame = ttk.Frame(panel)
+        inner = tk.Frame(panel, bg=ModernColors.BG_CARD, padx=20, pady=15)
+        inner.pack(fill=tk.X)
+        
+        # Header row
+        header_frame = tk.Frame(inner, bg=ModernColors.BG_CARD)
+        header_frame.pack(fill=tk.X, pady=(0, 15))
+        
+        tk.Label(header_frame, text="📈 Performance Metrics",
+                font=("Segoe UI", 14, "bold"),
+                bg=ModernColors.BG_CARD,
+                fg=ModernColors.PRIMARY).pack(side=tk.LEFT)
+        
+        # Current algorithm label
+        algo_frame = tk.Frame(header_frame, bg=ModernColors.BG_CARD)
+        algo_frame.pack(side=tk.RIGHT)
+        
+        tk.Label(algo_frame, text="Algorithm:",
+                font=("Segoe UI", 10),
+                bg=ModernColors.BG_CARD,
+                fg=ModernColors.TEXT_SECONDARY).pack(side=tk.LEFT)
+        
+        self.current_algo_label = tk.Label(algo_frame, text="—",
+                                            font=("Segoe UI", 11, "bold"),
+                                            bg=ModernColors.BG_CARD,
+                                            fg=ModernColors.PRIMARY)
+        self.current_algo_label.pack(side=tk.LEFT, padx=(8, 0))
+        
+        # Metrics cards grid
+        metrics_frame = tk.Frame(inner, bg=ModernColors.BG_CARD)
         metrics_frame.pack(fill=tk.X)
         
         # Row 1: Process metrics
-        row1 = ttk.Frame(metrics_frame)
-        row1.pack(fill=tk.X, pady=5)
-        
         metrics_row1 = [
-            ("Completed", "completed", "0/0"),
-            ("Avg Turnaround", "turnaround", "0.00"),
-            ("Avg Waiting", "waiting", "0.00"),
-            ("Avg Response", "response", "0.00"),
+            ("Completed", "completed", "0/0", "✅", ModernColors.SUCCESS),
+            ("Avg Turnaround", "turnaround", "0.00", "⏱️", ModernColors.INFO),
+            ("Avg Waiting", "waiting", "0.00", "⏳", ModernColors.WARNING),
+            ("Avg Response", "response", "0.00", "⚡", ModernColors.PRIMARY),
         ]
         
-        for label, key, default in metrics_row1:
-            card = MetricCard(row1, label, default)
-            card.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+        row1_frame = tk.Frame(metrics_frame, bg=ModernColors.BG_CARD)
+        row1_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        for label, key, default, icon, color in metrics_row1:
+            card = ModernMetricCard(row1_frame, label, default, icon, color)
+            card.pack(side=tk.LEFT, padx=(0, 10), fill=tk.X, expand=True)
             self.metric_cards[key] = card
         
         # Row 2: System metrics
-        row2 = ttk.Frame(metrics_frame)
-        row2.pack(fill=tk.X, pady=5)
-        
         metrics_row2 = [
-            ("Avg Utilization", "utilization", "0.0%"),
-            ("Load Balance Index", "lbi", "0.0000"),
-            ("Jain's Fairness", "fairness", "0.0000"),
-            ("Migrations", "migrations", "0"),
+            ("Avg Utilization", "utilization", "0.0%", "📊", ModernColors.SUCCESS),
+            ("Load Balance", "lbi", "0.0000", "⚖️", ModernColors.INFO),
+            ("Jain's Fairness", "fairness", "0.0000", "🎯", ModernColors.SECONDARY),
+            ("Migrations", "migrations", "0", "🔄", ModernColors.ACCENT),
         ]
         
-        for label, key, default in metrics_row2:
-            card = MetricCard(row2, label, default)
-            card.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+        row2_frame = tk.Frame(metrics_frame, bg=ModernColors.BG_CARD)
+        row2_frame.pack(fill=tk.X)
+        
+        for label, key, default, icon, color in metrics_row2:
+            card = ModernMetricCard(row2_frame, label, default, icon, color)
+            card.pack(side=tk.LEFT, padx=(0, 10), fill=tk.X, expand=True)
             self.metric_cards[key] = card
-        
-        # Comparison chart button area
-        chart_frame = ttk.Frame(panel)
-        chart_frame.pack(fill=tk.X, pady=(10, 0))
-        
-        ttk.Label(chart_frame, text="Algorithm: ").pack(side=tk.LEFT)
-        self.current_algo_label = ttk.Label(chart_frame, text="-", 
-                                             font=("Arial", 10, "bold"))
-        self.current_algo_label.pack(side=tk.LEFT)
     
     def _update_speed_label(self, event=None):
         """Update the speed label when slider changes."""
@@ -683,7 +1164,8 @@ class LoadBalancerGUI:
         self.is_running = True
         self.is_paused = False
         self._update_button_states()
-        self.status_label.config(text="Status: Running")
+        self.status_label.config(text="Running", fg=ModernColors.SUCCESS)
+        self._draw_status_led(ModernColors.SUCCESS)
         self.current_algo_label.config(text=algorithm.value)
         
         # Start simulation in background thread
@@ -725,11 +1207,13 @@ class LoadBalancerGUI:
         self.is_paused = not self.is_paused
         
         if self.is_paused:
-            self.pause_btn.config(text="▶ Resume")
-            self.status_label.config(text="Status: Paused")
+            self.pause_btn.config(text="▶ Resume", bg=ModernColors.SUCCESS)
+            self.status_label.config(text="Paused", fg=ModernColors.WARNING)
+            self._draw_status_led(ModernColors.WARNING)
         else:
-            self.pause_btn.config(text="⏸ Pause")
-            self.status_label.config(text="Status: Running")
+            self.pause_btn.config(text="⏸ Pause", bg=ModernColors.WARNING)
+            self.status_label.config(text="Running", fg=ModernColors.SUCCESS)
+            self._draw_status_led(ModernColors.SUCCESS)
     
     def _stop_simulation(self):
         """Stop the simulation."""
@@ -741,7 +1225,8 @@ class LoadBalancerGUI:
             self.engine.stop()
         
         self._update_button_states()
-        self.status_label.config(text="Status: Stopped")
+        self.status_label.config(text="Stopped", fg=ModernColors.DANGER)
+        self._draw_status_led(ModernColors.DANGER)
     
     def _reset_simulation(self):
         """Reset the simulation."""
@@ -753,10 +1238,11 @@ class LoadBalancerGUI:
         self._reset_metrics()
         self._reset_processor_displays()
         
-        self.status_label.config(text="Status: Ready")
-        self.time_label.config(text="Time: 0")
+        self.status_label.config(text="Ready", fg=ModernColors.TEXT_SECONDARY)
+        self._draw_status_led(ModernColors.TEXT_MUTED)
+        self.time_label.config(text="⏱️ Time: 0")
         self.progress_var.set(0)
-        self.current_algo_label.config(text="-")
+        self.current_algo_label.config(text="—")
     
     def _update_config(self):
         """Update configuration from GUI inputs."""
@@ -805,7 +1291,7 @@ class LoadBalancerGUI:
     def _handle_state_update(self, state: Dict[str, Any]):
         """Handle simulation state update."""
         # Update time display
-        self.time_label.config(text=f"Time: {state['time']}")
+        self.time_label.config(text=f"⏱️ Time: {state['time']}")
         
         # Update progress
         total = state['total_processes']
@@ -838,7 +1324,8 @@ class LoadBalancerGUI:
         """Handle simulation completion."""
         self.is_running = False
         self._update_button_states()
-        self.status_label.config(text="Status: Completed")
+        self.status_label.config(text="Completed", fg=ModernColors.SUCCESS)
+        self._draw_status_led(ModernColors.PRIMARY)
         
         # Update final metrics
         metrics = result.system_metrics
@@ -912,12 +1399,11 @@ class LoadBalancerGUI:
         pass
     
     def _update_gantt_chart(self):
-        """Update the Gantt chart visualization."""
+        """Update the Gantt chart visualization with modern styling."""
         self.gantt_ax.clear()
+        self._style_chart_axes(self.gantt_ax)
         
         if not self.gantt_data:
-            self.gantt_ax.set_xlabel("Time")
-            self.gantt_ax.set_ylabel("Processor")
             self.gantt_canvas.draw()
             return
         
@@ -931,7 +1417,7 @@ class LoadBalancerGUI:
             else:
                 consolidated.append(entry.copy())
         
-        # Draw rectangles
+        # Draw rectangles with modern styling
         num_processors = self.processors_var.get()
         process_colors = {}
         color_index = 0
@@ -939,16 +1425,19 @@ class LoadBalancerGUI:
         for entry in consolidated:
             pid = entry['process']
             if pid not in process_colors:
-                process_colors[pid] = ColorScheme.PROCESSOR_COLORS[color_index % len(ColorScheme.PROCESSOR_COLORS)]
+                process_colors[pid] = ModernColors.PROCESSOR_COLORS[color_index % len(ModernColors.PROCESSOR_COLORS)]
                 color_index += 1
             
-            rect = Rectangle(
-                (entry['start'], entry['processor'] - 0.4),
+            # Create rounded rectangle effect
+            rect = FancyBboxPatch(
+                (entry['start'], entry['processor'] - 0.35),
                 entry['end'] - entry['start'],
-                0.8,
+                0.7,
+                boxstyle="round,pad=0.02,rounding_size=0.15",
                 facecolor=process_colors[pid],
-                edgecolor='black',
-                linewidth=0.5
+                edgecolor='white',
+                linewidth=0.5,
+                alpha=0.9
             )
             self.gantt_ax.add_patch(rect)
             
@@ -960,18 +1449,17 @@ class LoadBalancerGUI:
                     entry['processor'],
                     f"P{pid}",
                     ha='center', va='center',
-                    fontsize=8, fontweight='bold'
+                    fontsize=8, fontweight='bold',
+                    color='white'
                 )
         
-        # Configure axes
+        # Configure axes with modern styling
         max_time = max(e['end'] for e in consolidated) if consolidated else 10
-        self.gantt_ax.set_xlim(0, max_time + 1)
+        self.gantt_ax.set_xlim(-0.5, max_time + 1)
         self.gantt_ax.set_ylim(-0.5, num_processors - 0.5)
         self.gantt_ax.set_yticks(range(num_processors))
-        self.gantt_ax.set_yticklabels([f"P{i}" for i in range(num_processors)])
-        self.gantt_ax.set_xlabel("Time")
-        self.gantt_ax.set_ylabel("Processor")
-        self.gantt_ax.grid(True, axis='x', alpha=0.3)
+        self.gantt_ax.set_yticklabels([f"CPU {i}" for i in range(num_processors)])
+        self.gantt_ax.grid(True, axis='x', alpha=0.2, color=ModernColors.TEXT_MUTED)
         
         self.gantt_fig.tight_layout()
         self.gantt_canvas.draw()
@@ -980,8 +1468,7 @@ class LoadBalancerGUI:
         """Clear the Gantt chart."""
         self.gantt_data.clear()
         self.gantt_ax.clear()
-        self.gantt_ax.set_xlabel("Time")
-        self.gantt_ax.set_ylabel("Processor")
+        self._style_chart_axes(self.gantt_ax)
         self.gantt_canvas.draw()
     
     def _populate_process_table(self):
@@ -1059,20 +1546,35 @@ class LoadBalancerGUI:
         # Update config
         self._update_config()
         
-        # Show progress dialog
+        # Show progress dialog with modern styling
         progress_window = tk.Toplevel(self.root)
-        progress_window.title("Comparing Algorithms")
-        progress_window.geometry("400x150")
+        progress_window.title("⏳ Comparing Algorithms")
+        progress_window.geometry("450x180")
+        progress_window.configure(bg=ModernColors.BG_DARK)
         progress_window.transient(self.root)
         progress_window.grab_set()
         
-        ttk.Label(progress_window, text="Running simulations for each algorithm...",
-                  font=("Arial", 12)).pack(pady=20)
+        # Center the window
+        progress_window.update_idletasks()
+        x = self.root.winfo_x() + (self.root.winfo_width() - 450) // 2
+        y = self.root.winfo_y() + (self.root.winfo_height() - 180) // 2
+        progress_window.geometry(f"+{x}+{y}")
         
-        progress_bar = ttk.Progressbar(progress_window, length=300, mode='determinate')
+        container = tk.Frame(progress_window, bg=ModernColors.BG_CARD, padx=30, pady=25)
+        container.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
+        
+        tk.Label(container, text="🔄 Running simulations...",
+                font=("Segoe UI", 14, "bold"),
+                bg=ModernColors.BG_CARD,
+                fg=ModernColors.TEXT_PRIMARY).pack(pady=(0, 15))
+        
+        progress_bar = ttk.Progressbar(container, length=350, mode='determinate')
         progress_bar.pack(pady=10)
         
-        status_label = ttk.Label(progress_window, text="")
+        status_label = tk.Label(container, text="",
+                               font=("Segoe UI", 10),
+                               bg=ModernColors.BG_CARD,
+                               fg=ModernColors.TEXT_SECONDARY)
         status_label.pack(pady=10)
         
         self.root.update()
@@ -1083,7 +1585,7 @@ class LoadBalancerGUI:
         results = {}
         
         for i, algo in enumerate(algorithms):
-            status_label.config(text=f"Running {algo.value}...")
+            status_label.config(text=f"Testing {algo.value}...")
             progress_bar['value'] = (i / len(algorithms)) * 100
             self.root.update()
             
@@ -1096,32 +1598,56 @@ class LoadBalancerGUI:
             batch.comparator.add_result(algo, result.system_metrics)
         
         progress_bar['value'] = 100
+        status_label.config(text="✅ Complete!")
+        self.root.update()
+        time.sleep(0.3)
         progress_window.destroy()
         
         # Show comparison results
         self._show_comparison_results(results, batch)
     
     def _show_comparison_results(self, results: Dict, batch: BatchSimulator):
-        """Display comparison results in a new window."""
+        """Display comparison results in a modern styled window."""
         window = tk.Toplevel(self.root)
-        window.title("Algorithm Comparison Results")
-        window.geometry("1000x700")
+        window.title("📊 Algorithm Comparison Results")
+        window.geometry("1100x750")
+        window.configure(bg=ModernColors.BG_DARK)
         
-        # Create notebook for tabs
-        notebook = ttk.Notebook(window)
-        notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        # Create modern notebook
+        style = ttk.Style()
+        style.configure("Modern.TNotebook", background=ModernColors.BG_DARK)
+        style.configure("Modern.TNotebook.Tab", 
+                       background=ModernColors.BG_CARD,
+                       foreground=ModernColors.TEXT_PRIMARY,
+                       padding=[20, 10],
+                       font=("Segoe UI", 10, "bold"))
+        style.map("Modern.TNotebook.Tab",
+                 background=[("selected", ModernColors.PRIMARY)],
+                 foreground=[("selected", "#ffffff")])
+        
+        notebook = ttk.Notebook(window, style="Modern.TNotebook")
+        notebook.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
         
         # Tab 1: Summary Table
-        table_frame = ttk.Frame(notebook)
-        notebook.add(table_frame, text="Summary")
+        table_frame = tk.Frame(notebook, bg=ModernColors.BG_CARD)
+        notebook.add(table_frame, text="📋 Summary")
+        
+        inner = tk.Frame(table_frame, bg=ModernColors.BG_CARD, padx=20, pady=20)
+        inner.pack(fill=tk.BOTH, expand=True)
+        
+        # Header
+        tk.Label(inner, text="🏆 Algorithm Performance Comparison",
+                font=("Segoe UI", 16, "bold"),
+                bg=ModernColors.BG_CARD,
+                fg=ModernColors.PRIMARY).pack(anchor=tk.W, pady=(0, 15))
         
         columns = ("Algorithm", "Time", "Avg Turnaround", "Avg Waiting",
                    "Utilization", "LBI", "Fairness", "Migrations")
         
-        tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=5)
+        tree = ttk.Treeview(inner, columns=columns, show="headings", height=5)
         for col in columns:
             tree.heading(col, text=col)
-            tree.column(col, width=110, anchor=tk.CENTER)
+            tree.column(col, width=120, anchor=tk.CENTER)
         
         for algo, result in results.items():
             m = result.system_metrics
@@ -1138,73 +1664,109 @@ class LoadBalancerGUI:
         
         tree.pack(fill=tk.BOTH, expand=True, pady=10)
         
-        # Best algorithm summary
-        best_frame = ttk.LabelFrame(table_frame, text="Best Algorithm By Metric", padding=10)
-        best_frame.pack(fill=tk.X, pady=10)
+        # Best algorithm summary with cards
+        best_frame = tk.Frame(inner, bg=ModernColors.BG_CARD)
+        best_frame.pack(fill=tk.X, pady=15)
+        
+        tk.Label(best_frame, text="🎯 Best Performers",
+                font=("Segoe UI", 14, "bold"),
+                bg=ModernColors.BG_CARD,
+                fg=ModernColors.TEXT_PRIMARY).pack(anchor=tk.W, pady=(0, 10))
         
         best_turnaround = batch.get_best_algorithm('avg_turnaround_time')
         best_waiting = batch.get_best_algorithm('avg_waiting_time')
         best_fairness = batch.get_best_algorithm('jains_fairness_index')
         
-        ttk.Label(best_frame, text=f"Lowest Turnaround Time: {best_turnaround}",
-                  font=("Arial", 10)).pack(anchor=tk.W)
-        ttk.Label(best_frame, text=f"Lowest Waiting Time: {best_waiting}",
-                  font=("Arial", 10)).pack(anchor=tk.W)
-        ttk.Label(best_frame, text=f"Best Fairness: {best_fairness}",
-                  font=("Arial", 10)).pack(anchor=tk.W)
+        cards_frame = tk.Frame(best_frame, bg=ModernColors.BG_CARD)
+        cards_frame.pack(fill=tk.X)
+        
+        for label, value, color in [
+            ("⏱️ Lowest Turnaround", best_turnaround, ModernColors.SUCCESS),
+            ("⏳ Lowest Waiting", best_waiting, ModernColors.INFO),
+            ("🎯 Best Fairness", best_fairness, ModernColors.ACCENT)
+        ]:
+            card = tk.Frame(cards_frame, bg=ModernColors.BG_INPUT, padx=15, pady=10)
+            card.pack(side=tk.LEFT, padx=(0, 10))
+            tk.Label(card, text=label, font=("Segoe UI", 9),
+                    bg=ModernColors.BG_INPUT, fg=ModernColors.TEXT_SECONDARY).pack(anchor=tk.W)
+            tk.Label(card, text=str(value), font=("Segoe UI", 12, "bold"),
+                    bg=ModernColors.BG_INPUT, fg=color).pack(anchor=tk.W)
         
         # Tab 2: Comparison Charts
-        chart_frame = ttk.Frame(notebook)
-        notebook.add(chart_frame, text="Charts")
+        chart_frame = tk.Frame(notebook, bg=ModernColors.BG_CARD)
+        notebook.add(chart_frame, text="📊 Charts")
         
-        fig = Figure(figsize=(10, 6), dpi=100)
+        fig = Figure(figsize=(11, 6.5), dpi=100, facecolor=ModernColors.BG_CARD)
+        
+        # Apply dark theme to all subplots
+        algo_names = [a.value for a in results.keys()]
+        bar_colors = [ModernColors.PRIMARY, ModernColors.SUCCESS, ModernColors.ACCENT]
         
         # Turnaround Time comparison
         ax1 = fig.add_subplot(221)
-        algo_names = [a.value for a in results.keys()]
+        ax1.set_facecolor(ModernColors.BG_CARD)
         turnaround_values = [r.system_metrics.avg_turnaround_time for r in results.values()]
-        bars = ax1.bar(algo_names, turnaround_values, color=['#2196F3', '#4CAF50', '#FF9800'])
-        ax1.set_ylabel("Time")
-        ax1.set_title("Average Turnaround Time")
-        ax1.tick_params(axis='x', rotation=15)
+        bars = ax1.bar(algo_names, turnaround_values, color=bar_colors)
+        ax1.set_ylabel("Time", color=ModernColors.TEXT_SECONDARY)
+        ax1.set_title("Average Turnaround Time", color=ModernColors.TEXT_PRIMARY, fontweight='bold')
+        ax1.tick_params(axis='x', rotation=15, colors=ModernColors.TEXT_SECONDARY)
+        ax1.tick_params(axis='y', colors=ModernColors.TEXT_SECONDARY)
+        ax1.spines['bottom'].set_color(ModernColors.TEXT_MUTED)
+        ax1.spines['left'].set_color(ModernColors.TEXT_MUTED)
+        ax1.spines['top'].set_visible(False)
+        ax1.spines['right'].set_visible(False)
         
         # Utilization comparison
         ax2 = fig.add_subplot(222)
+        ax2.set_facecolor(ModernColors.BG_CARD)
         util_values = [r.system_metrics.avg_utilization * 100 for r in results.values()]
-        bars = ax2.bar(algo_names, util_values, color=['#2196F3', '#4CAF50', '#FF9800'])
-        ax2.set_ylabel("Percentage")
-        ax2.set_title("Average CPU Utilization")
-        ax2.tick_params(axis='x', rotation=15)
+        bars = ax2.bar(algo_names, util_values, color=bar_colors)
+        ax2.set_ylabel("Percentage", color=ModernColors.TEXT_SECONDARY)
+        ax2.set_title("Average CPU Utilization", color=ModernColors.TEXT_PRIMARY, fontweight='bold')
+        ax2.tick_params(axis='x', rotation=15, colors=ModernColors.TEXT_SECONDARY)
+        ax2.tick_params(axis='y', colors=ModernColors.TEXT_SECONDARY)
+        ax2.spines['bottom'].set_color(ModernColors.TEXT_MUTED)
+        ax2.spines['left'].set_color(ModernColors.TEXT_MUTED)
+        ax2.spines['top'].set_visible(False)
+        ax2.spines['right'].set_visible(False)
         
         # Fairness Index comparison
         ax3 = fig.add_subplot(223)
+        ax3.set_facecolor(ModernColors.BG_CARD)
         fairness_values = [r.system_metrics.jains_fairness_index for r in results.values()]
-        bars = ax3.bar(algo_names, fairness_values, color=['#2196F3', '#4CAF50', '#FF9800'])
-        ax3.set_ylabel("Index (0-1)")
-        ax3.set_title("Jain's Fairness Index")
-        ax3.tick_params(axis='x', rotation=15)
+        bars = ax3.bar(algo_names, fairness_values, color=bar_colors)
+        ax3.set_ylabel("Index (0-1)", color=ModernColors.TEXT_SECONDARY)
+        ax3.set_title("Jain's Fairness Index", color=ModernColors.TEXT_PRIMARY, fontweight='bold')
+        ax3.tick_params(axis='x', rotation=15, colors=ModernColors.TEXT_SECONDARY)
+        ax3.tick_params(axis='y', colors=ModernColors.TEXT_SECONDARY)
+        ax3.spines['bottom'].set_color(ModernColors.TEXT_MUTED)
+        ax3.spines['left'].set_color(ModernColors.TEXT_MUTED)
+        ax3.spines['top'].set_visible(False)
+        ax3.spines['right'].set_visible(False)
         
         # Migrations comparison
         ax4 = fig.add_subplot(224)
+        ax4.set_facecolor(ModernColors.BG_CARD)
         migration_values = [r.system_metrics.total_migrations for r in results.values()]
-        bars = ax4.bar(algo_names, migration_values, color=['#2196F3', '#4CAF50', '#FF9800'])
-        ax4.set_ylabel("Count")
-        ax4.set_title("Process Migrations")
-        ax4.tick_params(axis='x', rotation=15)
+        bars = ax4.bar(algo_names, migration_values, color=bar_colors)
+        ax4.set_ylabel("Count", color=ModernColors.TEXT_SECONDARY)
+        ax4.set_title("Process Migrations", color=ModernColors.TEXT_PRIMARY, fontweight='bold')
+        ax4.tick_params(axis='x', rotation=15, colors=ModernColors.TEXT_SECONDARY)
+        ax4.tick_params(axis='y', colors=ModernColors.TEXT_SECONDARY)
+        ax4.spines['bottom'].set_color(ModernColors.TEXT_MUTED)
+        ax4.spines['left'].set_color(ModernColors.TEXT_MUTED)
+        ax4.spines['top'].set_visible(False)
+        ax4.spines['right'].set_visible(False)
         
-        fig.tight_layout()
+        fig.tight_layout(pad=3.0)
         
         canvas = FigureCanvasTkAgg(fig, master=chart_frame)
         canvas.draw()
-        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        # Add toolbar
-        toolbar = NavigationToolbar2Tk(canvas, chart_frame)
-        toolbar.update()
-        
-        # Export button
-        export_frame = ttk.Frame(window)
-        export_frame.pack(fill=tk.X, padx=10, pady=10)
+        # Export button frame
+        export_frame = tk.Frame(window, bg=ModernColors.BG_DARK)
+        export_frame.pack(fill=tk.X, padx=15, pady=(0, 15))
         
         def export_comparison():
             filepath = filedialog.asksaveasfilename(
@@ -1224,8 +1786,9 @@ class LoadBalancerGUI:
                     json.dump(data, f, indent=2)
                 messagebox.showinfo("Export Complete", f"Results exported to {filepath}")
         
-        ttk.Button(export_frame, text="Export Results", 
-                   command=export_comparison).pack(side=tk.RIGHT)
+        export_btn = ModernButton(export_frame, "Export Results", export_comparison,
+                                   style="primary", icon="📤")
+        export_btn.pack(side=tk.RIGHT)
     
     # =========================================================================
     # FILE OPERATIONS
@@ -1293,108 +1856,214 @@ class LoadBalancerGUI:
     # =========================================================================
     
     def _show_about(self):
-        """Show about dialog."""
-        about_text = f"""
-{APP_NAME}
-Version {VERSION}
-
-An educational simulation demonstrating dynamic 
-load balancing algorithms in multiprocessor systems.
-
-Key Features:
-• Multiple load balancing algorithms
-• Real-time visualization
-• Gantt chart process timeline
-• Performance metrics and comparison
-
-This project demonstrates Operating System concepts:
-• Process Management
-• CPU Scheduling
-• Load Balancing
-• Resource Utilization
-
-Author: Student
-Date: December 2024
-        """
-        messagebox.showinfo("About", about_text)
+        """Show modern about dialog."""
+        about_window = tk.Toplevel(self.root)
+        about_window.title("About")
+        about_window.geometry("500x550")
+        about_window.configure(bg=ModernColors.BG_DARK)
+        about_window.resizable(False, False)
+        
+        # Center the window
+        about_window.update_idletasks()
+        x = self.root.winfo_x() + (self.root.winfo_width() - 500) // 2
+        y = self.root.winfo_y() + (self.root.winfo_height() - 550) // 2
+        about_window.geometry(f"+{x}+{y}")
+        
+        container = tk.Frame(about_window, bg=ModernColors.BG_CARD, padx=40, pady=30)
+        container.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        # Logo/Icon
+        tk.Label(container, text="⚡", font=("Segoe UI", 48),
+                bg=ModernColors.BG_CARD, fg=ModernColors.PRIMARY).pack(pady=(0, 10))
+        
+        # Title
+        tk.Label(container, text=APP_NAME,
+                font=("Segoe UI", 18, "bold"),
+                bg=ModernColors.BG_CARD,
+                fg=ModernColors.TEXT_PRIMARY).pack()
+        
+        # Version
+        tk.Label(container, text=f"Version {VERSION}",
+                font=("Segoe UI", 11),
+                bg=ModernColors.BG_CARD,
+                fg=ModernColors.TEXT_MUTED).pack(pady=(5, 20))
+        
+        # Description
+        desc = """An educational simulation demonstrating dynamic
+load balancing algorithms in multiprocessor systems."""
+        tk.Label(container, text=desc,
+                font=("Segoe UI", 10),
+                bg=ModernColors.BG_CARD,
+                fg=ModernColors.TEXT_SECONDARY,
+                justify=tk.CENTER).pack(pady=(0, 20))
+        
+        # Features
+        features_frame = tk.Frame(container, bg=ModernColors.BG_INPUT, padx=20, pady=15)
+        features_frame.pack(fill=tk.X, pady=(0, 20))
+        
+        tk.Label(features_frame, text="✨ Key Features",
+                font=("Segoe UI", 11, "bold"),
+                bg=ModernColors.BG_INPUT,
+                fg=ModernColors.PRIMARY).pack(anchor=tk.W, pady=(0, 10))
+        
+        features = [
+            "🔀 Multiple load balancing algorithms",
+            "📊 Real-time visualization",
+            "📈 Gantt chart process timeline",
+            "🎯 Performance metrics & comparison"
+        ]
+        
+        for f in features:
+            tk.Label(features_frame, text=f,
+                    font=("Segoe UI", 10),
+                    bg=ModernColors.BG_INPUT,
+                    fg=ModernColors.TEXT_PRIMARY).pack(anchor=tk.W, pady=2)
+        
+        # OS Concepts
+        concepts_frame = tk.Frame(container, bg=ModernColors.BG_INPUT, padx=20, pady=15)
+        concepts_frame.pack(fill=tk.X)
+        
+        tk.Label(concepts_frame, text="📚 OS Concepts Demonstrated",
+                font=("Segoe UI", 11, "bold"),
+                bg=ModernColors.BG_INPUT,
+                fg=ModernColors.SECONDARY).pack(anchor=tk.W, pady=(0, 10))
+        
+        concepts = ["Process Management", "CPU Scheduling", 
+                   "Load Balancing", "Resource Utilization"]
+        
+        for c in concepts:
+            tk.Label(concepts_frame, text=f"• {c}",
+                    font=("Segoe UI", 10),
+                    bg=ModernColors.BG_INPUT,
+                    fg=ModernColors.TEXT_PRIMARY).pack(anchor=tk.W, pady=1)
+        
+        # Footer
+        tk.Label(container, text="Made with ❤️ for learning OS concepts",
+                font=("Segoe UI", 9),
+                bg=ModernColors.BG_CARD,
+                fg=ModernColors.TEXT_MUTED).pack(pady=(20, 0))
     
     def _show_algorithm_info(self):
-        """Show information about load balancing algorithms."""
+        """Show modern information about load balancing algorithms."""
         info_window = tk.Toplevel(self.root)
-        info_window.title("Load Balancing Algorithms")
-        info_window.geometry("600x500")
+        info_window.title("📖 Load Balancing Algorithms")
+        info_window.geometry("700x600")
+        info_window.configure(bg=ModernColors.BG_DARK)
         
-        text = tk.Text(info_window, wrap=tk.WORD, padx=20, pady=20)
+        container = tk.Frame(info_window, bg=ModernColors.BG_CARD, padx=25, pady=20)
+        container.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
+        
+        # Header
+        tk.Label(container, text="📖 Load Balancing Algorithms",
+                font=("Segoe UI", 16, "bold"),
+                bg=ModernColors.BG_CARD,
+                fg=ModernColors.PRIMARY).pack(anchor=tk.W, pady=(0, 15))
+        
+        # Scrollable text area
+        text_frame = tk.Frame(container, bg=ModernColors.BG_CARD)
+        text_frame.pack(fill=tk.BOTH, expand=True)
+        
+        scrollbar = ttk.Scrollbar(text_frame)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        text = tk.Text(text_frame, wrap=tk.WORD, 
+                      bg=ModernColors.BG_INPUT,
+                      fg=ModernColors.TEXT_PRIMARY,
+                      font=("Consolas", 10),
+                      padx=15, pady=15,
+                      relief=tk.FLAT,
+                      yscrollcommand=scrollbar.set)
         text.pack(fill=tk.BOTH, expand=True)
+        scrollbar.config(command=text.yview)
         
         info_text = """
-LOAD BALANCING ALGORITHMS
-=========================
+╔══════════════════════════════════════════════════════════════════╗
+║                    LOAD BALANCING ALGORITHMS                      ║
+╚══════════════════════════════════════════════════════════════════╝
 
-1. ROUND ROBIN
---------------
-Distribution: Assigns processes to processors in cyclic order (P0→P1→P2→P3→P0→...)
+┌──────────────────────────────────────────────────────────────────┐
+│  1. ROUND ROBIN                                                  │
+└──────────────────────────────────────────────────────────────────┘
 
-Advantages:
-• Simple and fair
-• Equal distribution by count
-• Low computational overhead
-• Deterministic behavior
+  Distribution: Assigns processes to processors in cyclic order
+                (P0 → P1 → P2 → P3 → P0 → ...)
 
-Disadvantages:
-• Ignores actual processor load
-• Can cause imbalance with varied process sizes
-• No dynamic adaptation
+  ✅ Advantages:
+     • Simple and fair
+     • Equal distribution by count
+     • Low computational overhead
+     • Deterministic behavior
 
-Best for: Homogeneous workloads with similar process sizes
+  ❌ Disadvantages:
+     • Ignores actual processor load
+     • Can cause imbalance with varied process sizes
+     • No dynamic adaptation
 
-
-2. LEAST LOADED FIRST
----------------------
-Distribution: Assigns each new process to the processor with minimum current load.
-
-Advantages:
-• Better load distribution
-• Adapts to current system state
-• Efficient for varied workloads
-• Considers actual work remaining
-
-Disadvantages:
-• Slightly higher overhead (requires load monitoring)
-• No process migration after initial assignment
-• May cause "herd behavior"
-
-Best for: Variable workloads with different burst times
+  🎯 Best for: Homogeneous workloads with similar process sizes
 
 
-3. THRESHOLD-BASED
-------------------
-Distribution: Uses least loaded for initial assignment, then migrates processes 
-when load difference exceeds a threshold.
+┌──────────────────────────────────────────────────────────────────┐
+│  2. LEAST LOADED FIRST                                           │
+└──────────────────────────────────────────────────────────────────┘
 
-Advantages:
-• Dynamic rebalancing
-• Handles changing workloads
-• Prevents severe imbalances
-• Combines best of other approaches
+  Distribution: Assigns each new process to the processor with
+                minimum current load.
 
-Disadvantages:
-• Migration overhead (context switch cost)
-• Requires careful threshold tuning
-• More complex implementation
-• May cause oscillation if thresholds wrong
+  ✅ Advantages:
+     • Better load distribution
+     • Adapts to current system state
+     • Efficient for varied workloads
+     • Considers actual work remaining
 
-Best for: Dynamic workloads where load changes over time
+  ❌ Disadvantages:
+     • Slightly higher overhead (requires load monitoring)
+     • No process migration after initial assignment
+     • May cause "herd behavior"
+
+  🎯 Best for: Variable workloads with different burst times
 
 
-METRICS EXPLAINED
-=================
+┌──────────────────────────────────────────────────────────────────┐
+│  3. THRESHOLD-BASED                                              │
+└──────────────────────────────────────────────────────────────────┘
 
-• Turnaround Time: Total time from process arrival to completion
-• Waiting Time: Time spent waiting in ready queue
-• CPU Utilization: Percentage of time processor is busy
-• Load Balance Index: Measure of load distribution (1.0 = perfect)
-• Jain's Fairness Index: Statistical fairness measure (1.0 = perfectly fair)
+  Distribution: Uses least loaded for initial assignment, then
+                migrates processes when load difference exceeds
+                a threshold.
+
+  ✅ Advantages:
+     • Dynamic rebalancing
+     • Handles changing workloads
+     • Prevents severe imbalances
+     • Combines best of other approaches
+
+  ❌ Disadvantages:
+     • Migration overhead (context switch cost)
+     • Requires careful threshold tuning
+     • More complex implementation
+     • May cause oscillation if thresholds wrong
+
+  🎯 Best for: Dynamic workloads where load changes over time
+
+
+╔══════════════════════════════════════════════════════════════════╗
+║                      METRICS EXPLAINED                            ║
+╚══════════════════════════════════════════════════════════════════╝
+
+  📊 Turnaround Time:
+     Total time from process arrival to completion
+
+  ⏳ Waiting Time:
+     Time spent waiting in ready queue
+
+  📈 CPU Utilization:
+     Percentage of time processor is busy
+
+  ⚖️ Load Balance Index:
+     Measure of load distribution (1.0 = perfect balance)
+
+  🎯 Jain's Fairness Index:
+     Statistical fairness measure (1.0 = perfectly fair)
         """
         
         text.insert(tk.END, info_text)
