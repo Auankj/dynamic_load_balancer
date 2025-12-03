@@ -331,10 +331,6 @@ def learn(self, reward, next_state):
 
 **Best for:** Complex, evolving workloads with learnable patterns
 
-**Modes:**
-- **Training Mode:** High exploration (ε-greedy), actively updates Q-values
-- **Exploitation Mode:** Uses learned policy, minimal exploration
-
 **Key Components:**
 - **State:** Discretized processor loads + queue sizes + process characteristics
 - **Action:** Processor selection (0 to N-1)
@@ -342,6 +338,32 @@ def learn(self, reward, next_state):
 - **Q-Table:** State-action value function
 
 **Time Complexity:** O(1) assignment (Q-table lookup)
+
+#### Train vs Exploit Mode
+
+The AI balancer supports two operational modes, selectable via the GUI:
+
+| Aspect | 🎓 Train Mode | 🎯 Exploit Mode |
+|--------|---------------|-----------------|
+| **Purpose** | Learn optimal strategies | Use learned knowledge |
+| **Exploration (ε)** | Starts at 100%, decays to 5% | Fixed at 1% |
+| **Behavior** | Tries random actions to discover better strategies | Almost always picks the best known action |
+| **Q-Table Updates** | Active learning from every decision | Continues learning (at slower rate) |
+| **Performance** | Initially poor, improves over time | Stable, uses trained policy |
+| **When to Use** | First runs, new workload patterns | After sufficient training |
+| **Recommended** | 500-2000+ process assignments | After training is complete |
+
+**Training Workflow:**
+1. **Start in Train Mode** - Let the AI explore different processor assignments
+2. **Run multiple simulations** - More processes = better learning
+3. **Watch ε decay** - As epsilon decreases, random exploration reduces
+4. **Switch to Exploit** - Once ε is low (< 10%), the AI has learned
+5. **Compare performance** - Trained AI should match or beat other algorithms
+
+**Model Persistence:**
+- Models auto-save to `output/q_learning_model.pkl` when simulation completes
+- Trained models are automatically loaded on startup
+- Use Exploit mode to leverage previously trained models
 
 ### Algorithm Comparison
 
