@@ -149,6 +149,26 @@ python main.py
 python test_suite.py
 ```
 
+### Windows Notes
+
+- Virtual environment activation (PowerShell):
+
+```powershell
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+```
+
+- Virtual environment activation (Command Prompt):
+
+```bat
+python -m venv venv
+venv\Scripts\activate.bat
+```
+
+- The GUI enables DPI awareness on modern Windows versions automatically to improve scaling on high-DPI displays. If you encounter scaling issues, try launching the app from PowerShell or Command Prompt after activating the virtual environment.
+
+- The application also selects a platform-appropriate default font (Segoe UI on Windows, Helvetica on macOS, DejaVu Sans on Linux) and includes improved mouse-wheel handling across platforms for scrollable panes.
+
 ### Dependencies
 
 | Package | Version | Purpose |

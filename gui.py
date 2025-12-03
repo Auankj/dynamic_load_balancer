@@ -24,6 +24,8 @@ Date: December 2024
 
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+import sys
+import ctypes
 from typing import List, Dict, Any, Optional, Callable
 import threading
 import queue
@@ -170,6 +172,21 @@ class ModernColors:
 ColorScheme = ModernColors
 
 
+# Platform font selection
+def _get_default_font_family():
+    """Return a sensible default font family depending on the OS."""
+    plat = sys.platform
+    if plat.startswith("win"):
+        return "Segoe UI"
+    if plat == "darwin":
+        # macOS: San Francisco is the system font, but not directly named; fall back to Helvetica
+        return "Helvetica"
+    # Linux and others
+    return "DejaVu Sans"
+
+DEFAULT_FONT_FAMILY = _get_default_font_family()
+
+
 # =============================================================================
 # MODERN CUSTOM WIDGETS
 # =============================================================================
@@ -226,11 +243,11 @@ class ModernLoadBar(tk.Canvas):
         text = f"{self._load * 100:.0f}%"
         # Shadow
         self.create_text(self.bar_width // 2 + 5, self.bar_height // 2 + 5,
-                        text=text, fill="#000000", font=("Segoe UI", 11, "bold"))
+                        text=text, fill="#000000", font=(DEFAULT_FONT_FAMILY, 11, "bold"))
         # Main text
         self.create_text(self.bar_width // 2 + 4, self.bar_height // 2 + 4,
                         text=text, fill=ModernColors.TEXT_PRIMARY, 
-                        font=("Segoe UI", 11, "bold"))
+                        font=(DEFAULT_FONT_FAMILY, 11, "bold"))
     
     def _draw_rounded_rect(self, x1, y1, x2, y2, radius=10, **kwargs):
         """Draw a rounded rectangle."""
@@ -296,7 +313,7 @@ class ModernProcessorCard(tk.Frame):
         # Processor icon/badge
         color = ModernColors.get_processor_color(self.processor_id)
         self.badge = tk.Label(header_frame, text=f"CPU {self.processor_id}",
-                              font=("Segoe UI", 12, "bold"), fg=color,
+                              font=(DEFAULT_FONT_FAMILY, 12, "bold"), fg=color,
                               bg=ModernColors.BG_CARD)
         self.badge.pack(side=tk.LEFT)
         
@@ -308,7 +325,7 @@ class ModernProcessorCard(tk.Frame):
         
         # Status text
         self.status_label = tk.Label(header_frame, text="Idle",
-                                      font=("Segoe UI", 10),
+                                      font=(DEFAULT_FONT_FAMILY, 10),
                                       fg=ModernColors.TEXT_SECONDARY,
                                       bg=ModernColors.BG_CARD)
         self.status_label.pack(side=tk.RIGHT)
@@ -325,10 +342,10 @@ class ModernProcessorCard(tk.Frame):
         queue_frame = tk.Frame(stats_frame, bg=ModernColors.BG_CARD)
         queue_frame.pack(side=tk.LEFT)
         
-        tk.Label(queue_frame, text="📋", font=("Segoe UI", 10),
+        tk.Label(queue_frame, text="📋", font=(DEFAULT_FONT_FAMILY, 10),
                 bg=ModernColors.BG_CARD).pack(side=tk.LEFT)
         self.queue_label = tk.Label(queue_frame, text="0",
-                                     font=("Segoe UI", 10, "bold"),
+                                     font=(DEFAULT_FONT_FAMILY, 10, "bold"),
                                      fg=ModernColors.TEXT_PRIMARY,
                                      bg=ModernColors.BG_CARD)
         self.queue_label.pack(side=tk.LEFT, padx=(2, 0))
@@ -337,10 +354,10 @@ class ModernProcessorCard(tk.Frame):
         current_frame = tk.Frame(stats_frame, bg=ModernColors.BG_CARD)
         current_frame.pack(side=tk.RIGHT)
         
-        tk.Label(current_frame, text="▶", font=("Segoe UI", 10),
+        tk.Label(current_frame, text="▶", font=(DEFAULT_FONT_FAMILY, 10),
                 fg=ModernColors.SUCCESS, bg=ModernColors.BG_CARD).pack(side=tk.LEFT)
         self.current_label = tk.Label(current_frame, text="—",
-                                       font=("Segoe UI", 10, "bold"),
+                                      font=(DEFAULT_FONT_FAMILY, 10, "bold"),
                                        fg=ModernColors.TEXT_PRIMARY,
                                        bg=ModernColors.BG_CARD)
         self.current_label.pack(side=tk.LEFT, padx=(2, 0))
@@ -403,17 +420,17 @@ class ModernMetricCard(tk.Frame):
         header = tk.Frame(container, bg=ModernColors.BG_CARD)
         header.pack(fill=tk.X)
         
-        tk.Label(header, text=icon, font=("Segoe UI", 14),
+        tk.Label(header, text=icon, font=(DEFAULT_FONT_FAMILY, 14),
                 bg=ModernColors.BG_CARD).pack(side=tk.LEFT)
         
-        self.label = tk.Label(header, text=label, font=("Segoe UI", 10),
+        self.label = tk.Label(header, text=label, font=(DEFAULT_FONT_FAMILY, 10),
                               fg=ModernColors.TEXT_SECONDARY,
                               bg=ModernColors.BG_CARD)
         self.label.pack(side=tk.LEFT, padx=(8, 0))
         
         # Value with accent color
         self.value_label = tk.Label(container, text=value,
-                                     font=("Segoe UI", 20, "bold"),
+                                     font=(DEFAULT_FONT_FAMILY, 20, "bold"),
                                      fg=self.accent,
                                      bg=ModernColors.BG_CARD)
         self.value_label.pack(anchor=tk.W, pady=(8, 0))
@@ -596,6 +613,18 @@ class LoadBalancerGUI:
     
     def __init__(self):
         """Initialize the modern GUI application."""
+        # Enable Windows DPI awareness before creating the Tk root
+        if sys.platform.startswith("win"):
+            try:
+                # Try newer API (Windows 8.1+)
+                ctypes.windll.shcore.SetProcessDpiAwareness(2)  # PROCESS_PER_MONITOR_DPI_AWARE
+            except Exception:
+                try:
+                    # Fallback for older Windows
+                    ctypes.windll.user32.SetProcessDPIAware()
+                except Exception:
+                    pass
+
         # Create main window
         self.root = tk.Tk()
         self.root.title(f"⚡ {APP_NAME} v{VERSION}")
@@ -661,25 +690,25 @@ class LoadBalancerGUI:
         style.configure("Card.TFrame", background=ModernColors.BG_CARD)
         
         style.configure("TLabel",
-                       background=ModernColors.BG_DARK,
-                       foreground=ModernColors.TEXT_PRIMARY,
-                       font=("Segoe UI", 10))
+                   background=ModernColors.BG_DARK,
+                   foreground=ModernColors.TEXT_PRIMARY,
+                   font=(DEFAULT_FONT_FAMILY, 10))
         
         style.configure("Header.TLabel",
-                       font=("Segoe UI", 16, "bold"),
-                       foreground=ModernColors.TEXT_PRIMARY)
+                   font=(DEFAULT_FONT_FAMILY, 16, "bold"),
+                   foreground=ModernColors.TEXT_PRIMARY)
         
         style.configure("SubHeader.TLabel",
-                       font=("Segoe UI", 12, "bold"),
-                       foreground=ModernColors.TEXT_SECONDARY)
+                   font=(DEFAULT_FONT_FAMILY, 12, "bold"),
+                   foreground=ModernColors.TEXT_SECONDARY)
         
         style.configure("TLabelframe",
                        background=ModernColors.BG_CARD,
                        foreground=ModernColors.TEXT_PRIMARY)
         style.configure("TLabelframe.Label",
-                       background=ModernColors.BG_CARD,
-                       foreground=ModernColors.PRIMARY,
-                       font=("Segoe UI", 11, "bold"))
+                   background=ModernColors.BG_CARD,
+                   foreground=ModernColors.PRIMARY,
+                   font=(DEFAULT_FONT_FAMILY, 11, "bold"))
         
         # Entry/Spinbox styles
         style.configure("TEntry",
@@ -710,14 +739,14 @@ class LoadBalancerGUI:
         
         # Treeview style
         style.configure("Treeview",
-                       background=ModernColors.BG_CARD,
-                       foreground=ModernColors.TEXT_PRIMARY,
-                       fieldbackground=ModernColors.BG_CARD,
-                       font=("Segoe UI", 9))
+                   background=ModernColors.BG_CARD,
+                   foreground=ModernColors.TEXT_PRIMARY,
+                   fieldbackground=ModernColors.BG_CARD,
+                   font=(DEFAULT_FONT_FAMILY, 9))
         style.configure("Treeview.Heading",
-                       background=ModernColors.BG_CARD_HOVER,
-                       foreground=ModernColors.TEXT_PRIMARY,
-                       font=("Segoe UI", 10, "bold"))
+                   background=ModernColors.BG_CARD_HOVER,
+                   foreground=ModernColors.TEXT_PRIMARY,
+                   font=(DEFAULT_FONT_FAMILY, 10, "bold"))
         style.map("Treeview",
                  background=[('selected', ModernColors.PRIMARY)],
                  foreground=[('selected', '#ffffff')])
@@ -726,6 +755,50 @@ class LoadBalancerGUI:
         style.configure("TScale",
                        background=ModernColors.BG_DARK,
                        troughcolor=ModernColors.BG_INPUT)
+
+    # --- Platform-aware mouse wheel helpers ---
+    def _on_mousewheel(self, event, widget):
+        """Normalize mouse-wheel event across platforms and scroll `widget`."""
+        try:
+            if sys.platform.startswith("win"):
+                # Windows: event.delta is multiple of 120
+                delta = int(event.delta / 120)
+                widget.yview_scroll(-delta, "units")
+            elif sys.platform == "darwin":
+                # macOS: event.delta is small; invert as needed
+                delta = int(event.delta)
+                widget.yview_scroll(-delta, "units")
+            else:
+                # X11: use Button-4 (up) and Button-5 (down)
+                if hasattr(event, 'num'):
+                    if event.num == 4:
+                        widget.yview_scroll(-1, "units")
+                    elif event.num == 5:
+                        widget.yview_scroll(1, "units")
+        except Exception:
+            pass
+
+    def _bind_mousewheel(self, widget):
+        """Bind platform-appropriate mouse wheel events to a scrollable widget.
+
+        This binds handlers on Enter/Leave so the wheel affects the widget
+        under the cursor instead of global scrolling.
+        """
+        if sys.platform.startswith("win") or sys.platform == "darwin":
+            def _on_enter(e):
+                widget.bind_all("<MouseWheel>", lambda ev: self._on_mousewheel(ev, widget))
+            def _on_leave(e):
+                widget.unbind_all("<MouseWheel>")
+        else:
+            def _on_enter(e):
+                widget.bind_all("<Button-4>", lambda ev: self._on_mousewheel(ev, widget))
+                widget.bind_all("<Button-5>", lambda ev: self._on_mousewheel(ev, widget))
+            def _on_leave(e):
+                widget.unbind_all("<Button-4>")
+                widget.unbind_all("<Button-5>")
+
+        widget.bind("<Enter>", _on_enter)
+        widget.bind("<Leave>", _on_leave)
     
     def _create_menu(self):
         """Create the modern application menu bar."""
@@ -816,16 +889,16 @@ class LoadBalancerGUI:
         title_frame = tk.Frame(header_frame, bg=ModernColors.BG_DARK)
         title_frame.pack(side=tk.LEFT)
         
-        tk.Label(title_frame, text="⚡", font=("Segoe UI", 24),
+        tk.Label(title_frame, text="⚡", font=(DEFAULT_FONT_FAMILY, 24),
                 bg=ModernColors.BG_DARK, fg=ModernColors.PRIMARY).pack(side=tk.LEFT)
         
         tk.Label(title_frame, text=APP_NAME,
-                font=("Segoe UI", 20, "bold"),
+                font=(DEFAULT_FONT_FAMILY, 20, "bold"),
                 bg=ModernColors.BG_DARK,
                 fg=ModernColors.TEXT_PRIMARY).pack(side=tk.LEFT, padx=(10, 0))
         
         tk.Label(title_frame, text=f"v{VERSION}",
-                font=("Segoe UI", 12),
+                font=(DEFAULT_FONT_FAMILY, 12),
                 bg=ModernColors.BG_DARK,
                 fg=ModernColors.TEXT_MUTED).pack(side=tk.LEFT, padx=(10, 0), pady=(8, 0))
     
@@ -845,7 +918,7 @@ class LoadBalancerGUI:
         title_row.pack(fill=tk.X, pady=(0, 15))
         
         tk.Label(title_row, text="🎮 Control Panel",
-                font=("Segoe UI", 14, "bold"),
+            font=(DEFAULT_FONT_FAMILY, 14, "bold"),
                 bg=ModernColors.BG_CARD,
                 fg=ModernColors.PRIMARY).pack(side=tk.LEFT)
         
@@ -855,7 +928,7 @@ class LoadBalancerGUI:
         
         # Processors input
         self._create_config_input(config_frame, "🖥️ Processors", "processors",
-                                  2, 16, self.config.num_processors)
+                      2, 16, self.config.num_processors)
         
         # Processes input
         self._create_config_input(config_frame, "📦 Processes", "processes",
@@ -870,7 +943,7 @@ class LoadBalancerGUI:
         algo_frame.pack(side=tk.LEFT, padx=(0, 30))
         
         tk.Label(algo_frame, text="🔀 Algorithm",
-                font=("Segoe UI", 10),
+            font=(DEFAULT_FONT_FAMILY, 10),
                 bg=ModernColors.BG_CARD,
                 fg=ModernColors.TEXT_SECONDARY).pack(anchor=tk.W)
         
@@ -878,7 +951,7 @@ class LoadBalancerGUI:
         algorithm_combo = ttk.Combobox(algo_frame, textvariable=self.algorithm_var,
                                         values=[a.value for a in LoadBalancingAlgorithm],
                                         state="readonly", width=18,
-                                        font=("Segoe UI", 10))
+                                        font=(DEFAULT_FONT_FAMILY, 10))
         algorithm_combo.pack(pady=(5, 0))
         
         # Speed control
@@ -886,7 +959,7 @@ class LoadBalancerGUI:
         speed_frame.pack(side=tk.LEFT, padx=(0, 30))
         
         tk.Label(speed_frame, text="⚡ Speed",
-                font=("Segoe UI", 10),
+            font=(DEFAULT_FONT_FAMILY, 10),
                 bg=ModernColors.BG_CARD,
                 fg=ModernColors.TEXT_SECONDARY).pack(anchor=tk.W)
         
@@ -899,7 +972,7 @@ class LoadBalancerGUI:
         speed_scale.pack(side=tk.LEFT)
         
         self.speed_label = tk.Label(speed_inner, text="50%",
-                                    font=("Segoe UI", 10, "bold"),
+                        font=(DEFAULT_FONT_FAMILY, 10, "bold"),
                                     bg=ModernColors.BG_CARD,
                                     fg=ModernColors.PRIMARY,
                                     width=5)
@@ -913,7 +986,7 @@ class LoadBalancerGUI:
         
         # Action buttons
         self.start_btn = ModernButton(button_frame, "Start", self._start_simulation,
-                                       style="success", icon="▶")
+                           style="success", icon="▶")
         self.start_btn.pack(side=tk.LEFT, padx=(0, 10))
         
         self.pause_btn = ModernButton(button_frame, "Pause", self._toggle_pause,
@@ -953,9 +1026,9 @@ class LoadBalancerGUI:
         self._draw_status_led(ModernColors.TEXT_MUTED)
         
         self.status_label = tk.Label(status_left, text="Ready",
-                                      font=("Segoe UI", 11, "bold"),
-                                      bg=ModernColors.BG_CARD,
-                                      fg=ModernColors.TEXT_SECONDARY)
+                          font=(DEFAULT_FONT_FAMILY, 11, "bold"),
+                          bg=ModernColors.BG_CARD,
+                          fg=ModernColors.TEXT_SECONDARY)
         self.status_label.pack(side=tk.LEFT, padx=(8, 0))
         
         # Time and progress
@@ -963,9 +1036,9 @@ class LoadBalancerGUI:
         status_right.pack(side=tk.RIGHT)
         
         self.time_label = tk.Label(status_right, text="⏱️ Time: 0",
-                                    font=("Segoe UI", 11),
-                                    bg=ModernColors.BG_CARD,
-                                    fg=ModernColors.TEXT_PRIMARY)
+                        font=(DEFAULT_FONT_FAMILY, 11),
+                        bg=ModernColors.BG_CARD,
+                        fg=ModernColors.TEXT_PRIMARY)
         self.time_label.pack(side=tk.RIGHT, padx=(20, 0))
         
         self.progress_var = tk.DoubleVar(value=0)
@@ -974,9 +1047,9 @@ class LoadBalancerGUI:
         self.progress_bar.pack(side=tk.RIGHT)
         
         tk.Label(status_right, text="Progress:",
-                font=("Segoe UI", 10),
-                bg=ModernColors.BG_CARD,
-                fg=ModernColors.TEXT_SECONDARY).pack(side=tk.RIGHT, padx=(0, 10))
+            font=(DEFAULT_FONT_FAMILY, 10),
+            bg=ModernColors.BG_CARD,
+            fg=ModernColors.TEXT_SECONDARY).pack(side=tk.RIGHT, padx=(0, 10))
     
     def _create_config_input(self, parent, label: str, var_name: str,
                             min_val: int, max_val: int, default: int):
@@ -985,15 +1058,15 @@ class LoadBalancerGUI:
         frame.pack(side=tk.LEFT, padx=(0, 30))
         
         tk.Label(frame, text=label,
-                font=("Segoe UI", 10),
-                bg=ModernColors.BG_CARD,
-                fg=ModernColors.TEXT_SECONDARY).pack(anchor=tk.W)
+            font=(DEFAULT_FONT_FAMILY, 10),
+            bg=ModernColors.BG_CARD,
+            fg=ModernColors.TEXT_SECONDARY).pack(anchor=tk.W)
         
         var = tk.IntVar(value=default)
         setattr(self, f"{var_name}_var", var)
         
         spinbox = ttk.Spinbox(frame, from_=min_val, to=max_val, width=8,
-                              textvariable=var, font=("Segoe UI", 10))
+                      textvariable=var, font=(DEFAULT_FONT_FAMILY, 10))
         spinbox.pack(pady=(5, 0))
     
     def _draw_status_led(self, color: str):
@@ -1013,7 +1086,7 @@ class LoadBalancerGUI:
         
         # Header
         tk.Label(inner, text="🖥️ Processors",
-                font=("Segoe UI", 14, "bold"),
+            font=(DEFAULT_FONT_FAMILY, 14, "bold"),
                 bg=ModernColors.BG_CARD,
                 fg=ModernColors.PRIMARY).pack(anchor=tk.W, pady=(0, 15))
         
@@ -1978,7 +2051,7 @@ class LoadBalancerGUI:
         container.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
         
         tk.Label(container, text="🔄 Running simulations...",
-                font=("Segoe UI", 14, "bold"),
+            font=(DEFAULT_FONT_FAMILY, 14, "bold"),
                 bg=ModernColors.BG_CARD,
                 fg=ModernColors.TEXT_PRIMARY).pack(pady=(0, 15))
         
@@ -1986,7 +2059,7 @@ class LoadBalancerGUI:
         progress_bar.pack(pady=10)
         
         status_label = tk.Label(container, text="",
-                               font=("Segoe UI", 10),
+                       font=(DEFAULT_FONT_FAMILY, 10),
                                bg=ModernColors.BG_CARD,
                                fg=ModernColors.TEXT_SECONDARY)
         status_label.pack(pady=10)
@@ -2034,7 +2107,7 @@ class LoadBalancerGUI:
                        background=ModernColors.BG_CARD,
                        foreground=ModernColors.TEXT_PRIMARY,
                        padding=[20, 10],
-                       font=("Segoe UI", 10, "bold"))
+                   font=(DEFAULT_FONT_FAMILY, 10, "bold"))
         style.map("Modern.TNotebook.Tab",
                  background=[("selected", ModernColors.PRIMARY)],
                  foreground=[("selected", "#ffffff")])
@@ -2051,7 +2124,7 @@ class LoadBalancerGUI:
         
         # Header
         tk.Label(inner, text="🏆 Algorithm Performance Comparison",
-                font=("Segoe UI", 16, "bold"),
+            font=(DEFAULT_FONT_FAMILY, 16, "bold"),
                 bg=ModernColors.BG_CARD,
                 fg=ModernColors.PRIMARY).pack(anchor=tk.W, pady=(0, 15))
         
@@ -2083,7 +2156,7 @@ class LoadBalancerGUI:
         best_frame.pack(fill=tk.X, pady=15)
         
         tk.Label(best_frame, text="🎯 Best Performers",
-                font=("Segoe UI", 14, "bold"),
+            font=(DEFAULT_FONT_FAMILY, 14, "bold"),
                 bg=ModernColors.BG_CARD,
                 fg=ModernColors.TEXT_PRIMARY).pack(anchor=tk.W, pady=(0, 10))
         
@@ -2101,9 +2174,9 @@ class LoadBalancerGUI:
         ]:
             card = tk.Frame(cards_frame, bg=ModernColors.BG_INPUT, padx=15, pady=10)
             card.pack(side=tk.LEFT, padx=(0, 10))
-            tk.Label(card, text=label, font=("Segoe UI", 9),
+            tk.Label(card, text=label, font=(DEFAULT_FONT_FAMILY, 9),
                     bg=ModernColors.BG_INPUT, fg=ModernColors.TEXT_SECONDARY).pack(anchor=tk.W)
-            tk.Label(card, text=str(value), font=("Segoe UI", 12, "bold"),
+            tk.Label(card, text=str(value), font=(DEFAULT_FONT_FAMILY, 12, "bold"),
                     bg=ModernColors.BG_INPUT, fg=color).pack(anchor=tk.W)
         
         # Tab 2: Comparison Charts
@@ -2287,18 +2360,18 @@ class LoadBalancerGUI:
         container.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
         
         # Logo/Icon
-        tk.Label(container, text="⚡", font=("Segoe UI", 48),
-                bg=ModernColors.BG_CARD, fg=ModernColors.PRIMARY).pack(pady=(0, 10))
+        tk.Label(container, text="⚡", font=(DEFAULT_FONT_FAMILY, 48),
+            bg=ModernColors.BG_CARD, fg=ModernColors.PRIMARY).pack(pady=(0, 10))
         
         # Title
         tk.Label(container, text=APP_NAME,
-                font=("Segoe UI", 18, "bold"),
+            font=(DEFAULT_FONT_FAMILY, 18, "bold"),
                 bg=ModernColors.BG_CARD,
                 fg=ModernColors.TEXT_PRIMARY).pack()
         
         # Version
         tk.Label(container, text=f"Version {VERSION}",
-                font=("Segoe UI", 11),
+            font=(DEFAULT_FONT_FAMILY, 11),
                 bg=ModernColors.BG_CARD,
                 fg=ModernColors.TEXT_MUTED).pack(pady=(5, 20))
         
@@ -2306,19 +2379,19 @@ class LoadBalancerGUI:
         desc = """An educational simulation demonstrating dynamic
 load balancing algorithms in multiprocessor systems."""
         tk.Label(container, text=desc,
-                font=("Segoe UI", 10),
-                bg=ModernColors.BG_CARD,
-                fg=ModernColors.TEXT_SECONDARY,
-                justify=tk.CENTER).pack(pady=(0, 20))
+            font=(DEFAULT_FONT_FAMILY, 10),
+            bg=ModernColors.BG_CARD,
+            fg=ModernColors.TEXT_SECONDARY,
+            justify=tk.CENTER).pack(pady=(0, 20))
         
         # Features
         features_frame = tk.Frame(container, bg=ModernColors.BG_INPUT, padx=20, pady=15)
         features_frame.pack(fill=tk.X, pady=(0, 20))
         
         tk.Label(features_frame, text="✨ Key Features",
-                font=("Segoe UI", 11, "bold"),
-                bg=ModernColors.BG_INPUT,
-                fg=ModernColors.PRIMARY).pack(anchor=tk.W, pady=(0, 10))
+            font=(DEFAULT_FONT_FAMILY, 11, "bold"),
+            bg=ModernColors.BG_INPUT,
+            fg=ModernColors.PRIMARY).pack(anchor=tk.W, pady=(0, 10))
         
         features = [
             "🔀 Multiple load balancing algorithms",
@@ -2329,33 +2402,33 @@ load balancing algorithms in multiprocessor systems."""
         
         for f in features:
             tk.Label(features_frame, text=f,
-                    font=("Segoe UI", 10),
-                    bg=ModernColors.BG_INPUT,
-                    fg=ModernColors.TEXT_PRIMARY).pack(anchor=tk.W, pady=2)
+                font=(DEFAULT_FONT_FAMILY, 10),
+                bg=ModernColors.BG_INPUT,
+                fg=ModernColors.TEXT_PRIMARY).pack(anchor=tk.W, pady=2)
         
         # OS Concepts
         concepts_frame = tk.Frame(container, bg=ModernColors.BG_INPUT, padx=20, pady=15)
         concepts_frame.pack(fill=tk.X)
         
         tk.Label(concepts_frame, text="📚 OS Concepts Demonstrated",
-                font=("Segoe UI", 11, "bold"),
-                bg=ModernColors.BG_INPUT,
-                fg=ModernColors.SECONDARY).pack(anchor=tk.W, pady=(0, 10))
+            font=(DEFAULT_FONT_FAMILY, 11, "bold"),
+            bg=ModernColors.BG_INPUT,
+            fg=ModernColors.SECONDARY).pack(anchor=tk.W, pady=(0, 10))
         
         concepts = ["Process Management", "CPU Scheduling", 
                    "Load Balancing", "Resource Utilization"]
         
         for c in concepts:
             tk.Label(concepts_frame, text=f"• {c}",
-                    font=("Segoe UI", 10),
-                    bg=ModernColors.BG_INPUT,
-                    fg=ModernColors.TEXT_PRIMARY).pack(anchor=tk.W, pady=1)
+                font=(DEFAULT_FONT_FAMILY, 10),
+                bg=ModernColors.BG_INPUT,
+                fg=ModernColors.TEXT_PRIMARY).pack(anchor=tk.W, pady=1)
         
         # Footer
         tk.Label(container, text="Made with ❤️ for learning OS concepts",
-                font=("Segoe UI", 9),
-                bg=ModernColors.BG_CARD,
-                fg=ModernColors.TEXT_MUTED).pack(pady=(20, 0))
+            font=(DEFAULT_FONT_FAMILY, 9),
+            bg=ModernColors.BG_CARD,
+            fg=ModernColors.TEXT_MUTED).pack(pady=(20, 0))
     
     def _show_algorithm_info(self):
         """Show modern information about load balancing algorithms."""
@@ -2369,7 +2442,7 @@ load balancing algorithms in multiprocessor systems."""
         
         # Header
         tk.Label(container, text="📖 Load Balancing Algorithms",
-                font=("Segoe UI", 16, "bold"),
+            font=(DEFAULT_FONT_FAMILY, 16, "bold"),
                 bg=ModernColors.BG_CARD,
                 fg=ModernColors.PRIMARY).pack(anchor=tk.W, pady=(0, 15))
         
