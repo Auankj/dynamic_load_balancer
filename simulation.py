@@ -235,7 +235,10 @@ class SimulationEngine:
                 
                 # Create load balancer
                 algo = algorithm or self.config.default_algorithm
-                self.load_balancer = LoadBalancerFactory.create(algo, self.config)
+                self.load_balancer = LoadBalancerFactory.create(
+                    algo, self.config, 
+                    num_processors=self.config.num_processors
+                )
                 
                 # Create metrics calculator
                 self.metrics_calculator = MetricsCalculator(algo)
@@ -406,6 +409,11 @@ class SimulationEngine:
                     if process in self.active_processes:
                         self.active_processes.remove(process)
                     self.completed_processes.append(process)
+                    
+                    # Provide feedback to AI load balancer if applicable
+                    if hasattr(self.load_balancer, 'process_completed'):
+                        processors = list(self.processor_manager)
+                        self.load_balancer.process_completed(process, processors)
                     
                     # Callback
                     if self._on_process_complete_callback:

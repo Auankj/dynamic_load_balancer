@@ -7,6 +7,9 @@
 # Data Visualization
 matplotlib>=3.5.0
 
+# AI/ML Support
+numpy>=1.21.0
+
 # No additional dependencies required - using standard library:
 # - threading (built-in)
 # - queue (built-in)

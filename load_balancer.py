@@ -635,15 +635,28 @@ class LoadBalancerFactory:
     based on the algorithm type enum.
     """
     
+    # Lazy import for Q-Learning to avoid circular imports
+    _qlearning_balancer_class = None
+    
+    @classmethod
+    def _get_qlearning_class(cls):
+        """Lazy load Q-Learning balancer to avoid circular imports."""
+        if cls._qlearning_balancer_class is None:
+            from ai_balancer import QLearningBalancer
+            cls._qlearning_balancer_class = QLearningBalancer
+        return cls._qlearning_balancer_class
+    
     @staticmethod
     def create(algorithm: LoadBalancingAlgorithm, 
-               config: SimulationConfig = None) -> LoadBalancer:
+               config: SimulationConfig = None,
+               num_processors: int = 4) -> LoadBalancer:
         """
         Create a load balancer instance.
         
         Args:
             algorithm: The algorithm type to create
             config: Optional configuration
+            num_processors: Number of processors (for Q-Learning)
             
         Returns:
             LoadBalancer instance
@@ -657,6 +670,9 @@ class LoadBalancerFactory:
             return LeastLoadedBalancer(config)
         elif algorithm == LoadBalancingAlgorithm.THRESHOLD_BASED:
             return ThresholdBasedBalancer(config)
+        elif algorithm == LoadBalancingAlgorithm.Q_LEARNING:
+            QLearningBalancer = LoadBalancerFactory._get_qlearning_class()
+            return QLearningBalancer(config=config, num_processors=num_processors)
         else:
             raise ValueError(f"Unknown algorithm: {algorithm}")
     
@@ -674,7 +690,9 @@ class LoadBalancerFactory:
             LoadBalancingAlgorithm.LEAST_LOADED.value: 
                 "Assigns to processor with minimum load - adaptive but no migration",
             LoadBalancingAlgorithm.THRESHOLD_BASED.value: 
-                "Dynamic migration when imbalance exceeds threshold - most sophisticated"
+                "Dynamic migration when imbalance exceeds threshold - most sophisticated",
+            LoadBalancingAlgorithm.Q_LEARNING.value:
+                "AI-powered adaptive balancing using reinforcement learning"
         }
 
 

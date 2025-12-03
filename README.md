@@ -303,15 +303,57 @@ def check_balance(self, processors):
 
 **Time Complexity:** O(n) monitoring + O(1) migration decision
 
+---
+
+### 4. AI Q-Learning (`q_learning`)
+**How it works:** Uses reinforcement learning to learn optimal process assignments through experience.
+
+```python
+# Simplified logic
+def assign(self, process, processors):
+    state = encode_state(processors, process)
+    if training and random() < epsilon:
+        action = random_processor()  # Exploration
+    else:
+        action = argmax(Q[state])    # Exploitation
+    return processors[action]
+
+def learn(self, reward, next_state):
+    Q[state][action] += α * (reward + γ * max(Q[next_state]) - Q[state][action])
+```
+
+| Pros | Cons |
+|------|------|
+| Learns optimal strategy | Needs training time |
+| Adapts to workload patterns | Higher memory usage |
+| Improves over time | Initial random behavior |
+| Can outperform static algorithms | Requires hyperparameter tuning |
+
+**Best for:** Complex, evolving workloads with learnable patterns
+
+**Modes:**
+- **Training Mode:** High exploration (ε-greedy), actively updates Q-values
+- **Exploitation Mode:** Uses learned policy, minimal exploration
+
+**Key Components:**
+- **State:** Discretized processor loads + queue sizes + process characteristics
+- **Action:** Processor selection (0 to N-1)
+- **Reward:** Negative turnaround time + fairness bonus - migration penalty
+- **Q-Table:** State-action value function
+
+**Time Complexity:** O(1) assignment (Q-table lookup)
+
 ### Algorithm Comparison
 
-| Metric | Round Robin | Least Loaded | Threshold |
-|--------|-------------|--------------|-----------|
-| **Assignment Speed** | ⭐⭐⭐ Fastest | ⭐⭐ Medium | ⭐⭐ Medium |
-| **Load Balance** | ⭐ Poor | ⭐⭐⭐ Good | ⭐⭐⭐ Best |
-| **Adaptability** | ⭐ None | ⭐⭐ Reactive | ⭐⭐⭐ Proactive |
-| **Overhead** | ⭐⭐⭐ Minimal | ⭐⭐ Low | ⭐ Higher |
-| **Best Scenario** | Uniform tasks | Mixed tasks | Dynamic loads |
+| Metric | Round Robin | Least Loaded | Threshold | Q-Learning |
+|--------|-------------|--------------|-----------|------------|
+| **Assignment Speed** | ⭐⭐⭐ Fastest | ⭐⭐ Medium | ⭐⭐ Medium | ⭐⭐⭐ Fast* |
+| **Load Balance** | ⭐ Poor | ⭐⭐⭐ Good | ⭐⭐⭐ Best | ⭐⭐⭐ Adaptive |
+| **Adaptability** | ⭐ None | ⭐⭐ Reactive | ⭐⭐⭐ Proactive | ⭐⭐⭐ Learning |
+| **Overhead** | ⭐⭐⭐ Minimal | ⭐⭐ Low | ⭐ Higher | ⭐⭐ Medium |
+| **Best Scenario** | Uniform tasks | Mixed tasks | Dynamic loads | Pattern-rich |
+
+*After training; initial training phase has higher overhead.
 
 ## 📁 Project Structure
 
@@ -322,12 +364,13 @@ dynamic_load_balancer/
 ├── process.py           # Process dataclass and ProcessGenerator
 ├── processor.py         # Processor class and ProcessorManager
 ├── load_balancer.py     # Load balancing algorithms (Strategy pattern)
+├── ai_balancer.py       # AI Q-Learning load balancer with RL agent
 ├── simulation.py        # SimulationEngine and SimulationResult
 ├── metrics.py           # ProcessMetrics, ProcessorMetrics, SystemMetrics
 ├── gui.py               # Full Tkinter GUI with Matplotlib integration
 ├── utils.py             # SimulationLogger, DataExporter utilities
 ├── validators.py        # Input validation and error handling
-├── test_suite.py        # Comprehensive test suite (91 tests)
+├── test_suite.py        # Comprehensive test suite (100+ tests)
 ├── requirements.txt     # Python dependencies
 ├── README.md            # This documentation
 └── project.xml          # Project specification

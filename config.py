@@ -51,10 +51,12 @@ class LoadBalancingAlgorithm(Enum):
     - ROUND_ROBIN: Fair distribution, simple, doesn't consider actual load
     - LEAST_LOADED: Assigns to least busy processor, better load distribution
     - THRESHOLD_BASED: Only migrates when load difference exceeds threshold
+    - Q_LEARNING: AI-powered adaptive balancing using reinforcement learning
     """
     ROUND_ROBIN = "Round Robin"
     LEAST_LOADED = "Least Loaded First"
     THRESHOLD_BASED = "Threshold Based"
+    Q_LEARNING = "AI (Q-Learning)"
 
 
 class ProcessPriority(Enum):
@@ -393,6 +395,16 @@ Threshold-Based Load Balancing:
 - Migrates processes when load difference exceeds threshold
 - Includes hysteresis to prevent thrashing (constant migration)
 - Best for: Dynamic workloads where load changes over time
+    """.strip(),
+    
+    LoadBalancingAlgorithm.Q_LEARNING: """
+AI (Q-Learning) Load Balancing:
+- Uses reinforcement learning to learn optimal assignments
+- Adapts to workload patterns through experience
+- Balances exploration (trying new strategies) and exploitation (using learned knowledge)
+- Training Mode: Actively learns and improves policy
+- Exploitation Mode: Uses learned policy for best performance
+- Best for: Complex, evolving workloads where patterns emerge over time
     """.strip()
 }
 

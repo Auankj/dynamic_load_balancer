@@ -89,6 +89,7 @@ class TestConfig(unittest.TestCase):
         self.assertEqual(LoadBalancingAlgorithm.ROUND_ROBIN.value, "Round Robin")
         self.assertEqual(LoadBalancingAlgorithm.LEAST_LOADED.value, "Least Loaded First")
         self.assertEqual(LoadBalancingAlgorithm.THRESHOLD_BASED.value, "Threshold Based")
+        self.assertEqual(LoadBalancingAlgorithm.Q_LEARNING.value, "AI (Q-Learning)")
         
     def test_simulation_config_defaults(self):
         """Test default configuration values."""
@@ -513,6 +514,12 @@ class TestLoadBalancerFactory(unittest.TestCase):
         """Test factory creates Threshold Based balancer."""
         balancer = LoadBalancerFactory.create(LoadBalancingAlgorithm.THRESHOLD_BASED)
         self.assertIsInstance(balancer, ThresholdBasedBalancer)
+        
+    def test_factory_creates_qlearning(self):
+        """Test factory creates Q-Learning balancer."""
+        from ai_balancer import QLearningBalancer
+        balancer = LoadBalancerFactory.create(LoadBalancingAlgorithm.Q_LEARNING, num_processors=4)
+        self.assertIsInstance(balancer, QLearningBalancer)
         
     def test_factory_with_config(self):
         """Test factory passes configuration."""
@@ -1199,6 +1206,256 @@ class TestErrorHandling(unittest.TestCase):
 
 
 # =============================================================================
+# TEST AI BALANCER
+# =============================================================================
+
+class TestQLearningBalancer(unittest.TestCase):
+    """Test Q-Learning load balancer."""
+    
+    def setUp(self):
+        """Set up test fixtures."""
+        from ai_balancer import QLearningBalancer, QLearningAgent, StateEncoder
+        self.config = SimulationConfig(num_processors=4)
+        self.balancer = QLearningBalancer(config=self.config, num_processors=4)
+        self.manager = ProcessorManager(num_processors=4)
+        self.processors = list(self.manager)
+        
+    def test_balancer_creation(self):
+        """Test Q-Learning balancer initialization."""
+        self.assertIsNotNone(self.balancer)
+        self.assertEqual(self.balancer.algorithm_type, LoadBalancingAlgorithm.Q_LEARNING)
+        self.assertEqual(self.balancer.name, "AI (Q-Learning)")
+        
+    def test_process_assignment(self):
+        """Test that balancer assigns processes."""
+        process = Process(pid=1, burst_time=10)
+        selected = self.balancer.assign_process(process, self.processors)
+        
+        self.assertIsNotNone(selected)
+        self.assertIn(selected, self.processors)
+        self.assertEqual(process.processor_id, selected.processor_id)
+        
+    def test_training_mode_toggle(self):
+        """Test switching between training and exploitation modes."""
+        self.assertTrue(self.balancer.agent.training_mode)
+        
+        self.balancer.set_training_mode(False)
+        self.assertFalse(self.balancer.agent.training_mode)
+        
+        self.balancer.set_training_mode(True)
+        self.assertTrue(self.balancer.agent.training_mode)
+        
+    def test_get_statistics(self):
+        """Test statistics retrieval."""
+        stats = self.balancer.get_statistics()
+        
+        self.assertIn('episode_count', stats)
+        self.assertIn('epsilon', stats)
+        self.assertIn('q_table_size', stats)
+        self.assertIn('training_mode', stats)
+        
+    def test_multiple_assignments(self):
+        """Test multiple process assignments."""
+        generator = ProcessGenerator(config=self.config)
+        processes = generator.generate_processes(10)
+        
+        for process in processes:
+            selected = self.balancer.assign_process(process, self.processors)
+            self.assertIsNotNone(selected)
+            
+        self.assertEqual(self.balancer.assignment_count, 10)
+        
+    def test_process_completed_feedback(self):
+        """Test reward feedback mechanism."""
+        process = Process(pid=1, burst_time=10)
+        process.start_time = 0
+        process.completion_time = 12
+        
+        selected = self.balancer.assign_process(process, self.processors)
+        
+        # Simulate process completion
+        self.balancer.process_completed(process, self.processors)
+        
+        # Agent should have received update
+        stats = self.balancer.get_statistics()
+        self.assertGreater(stats['total_steps'], 0)
+        
+
+class TestQLearningAgent(unittest.TestCase):
+    """Test Q-Learning agent."""
+    
+    def setUp(self):
+        """Set up test fixtures."""
+        from ai_balancer import QLearningAgent, QLearningConfig
+        self.agent = QLearningAgent(num_processors=4)
+        
+    def test_agent_creation(self):
+        """Test agent initialization."""
+        self.assertEqual(self.agent.num_processors, 4)
+        self.assertEqual(self.agent.epsilon, self.agent.config.epsilon_start)
+        self.assertTrue(self.agent.training_mode)
+        
+    def test_action_selection(self):
+        """Test action selection."""
+        from ai_balancer import SystemState
+        state = SystemState(
+            load_levels=(0, 0, 0, 0),
+            queue_levels=(0, 0, 0, 0),
+            process_priority=2,
+            process_burst_bucket=1
+        )
+        
+        action = self.agent.get_action(state)
+        self.assertIn(action, range(4))
+        
+    def test_q_value_update(self):
+        """Test Q-value update."""
+        from ai_balancer import SystemState
+        state = SystemState(
+            load_levels=(0, 1, 0, 0),
+            queue_levels=(0, 1, 0, 0),
+            process_priority=2,
+            process_burst_bucket=1
+        )
+        
+        # Get action and update
+        action = self.agent.get_action(state)
+        self.agent.update(reward=-1.0, next_state=state, done=False)
+        
+        # Q-table should have entry
+        self.assertIn(state, self.agent.q_table)
+        
+    def test_epsilon_decay(self):
+        """Test exploration rate decay."""
+        from ai_balancer import SystemState
+        initial_epsilon = self.agent.epsilon
+        
+        state = SystemState(
+            load_levels=(0, 0, 0, 0),
+            queue_levels=(0, 0, 0, 0),
+            process_priority=2,
+            process_burst_bucket=1
+        )
+        
+        # Complete an episode
+        for _ in range(10):
+            self.agent.get_action(state)
+            self.agent.update(reward=-1.0, next_state=state, done=False)
+        
+        # Mark episode complete
+        self.agent.update(reward=-1.0, next_state=None, done=True)
+        
+        # Epsilon should have decayed
+        self.assertLess(self.agent.epsilon, initial_epsilon)
+        
+    def test_reset(self):
+        """Test agent reset."""
+        from ai_balancer import SystemState
+        state = SystemState(
+            load_levels=(0, 0, 0, 0),
+            queue_levels=(0, 0, 0, 0),
+            process_priority=2,
+            process_burst_bucket=1
+        )
+        
+        # Do some learning
+        self.agent.get_action(state)
+        self.agent.update(reward=-1.0, next_state=state, done=True)
+        
+        # Reset
+        self.agent.reset()
+        
+        self.assertEqual(len(self.agent.q_table), 0)
+        self.assertEqual(self.agent.episode_count, 0)
+        
+
+class TestStateEncoder(unittest.TestCase):
+    """Test state encoding for Q-Learning."""
+    
+    def setUp(self):
+        """Set up test fixtures."""
+        from ai_balancer import StateEncoder
+        self.encoder = StateEncoder()
+        self.manager = ProcessorManager(num_processors=4)
+        self.processors = list(self.manager)
+        
+    def test_encode_empty_state(self):
+        """Test encoding empty system state."""
+        process = Process(pid=1, burst_time=5)
+        state = self.encoder.encode(self.processors, process)
+        
+        self.assertIsNotNone(state)
+        self.assertEqual(len(state.load_levels), 4)
+        self.assertEqual(len(state.queue_levels), 4)
+        
+    def test_encode_loaded_state(self):
+        """Test encoding with some load."""
+        # Add processes to first processor
+        for i in range(3):
+            p = Process(pid=i, burst_time=10)
+            self.processors[0].add_process(p)
+            
+        process = Process(pid=99, burst_time=5)
+        state = self.encoder.encode(self.processors, process)
+        
+        # First processor should have higher load level
+        self.assertGreater(state.load_levels[0], state.load_levels[1])
+        
+    def test_state_hashable(self):
+        """Test that states are hashable for Q-table."""
+        process = Process(pid=1, burst_time=5)
+        state = self.encoder.encode(self.processors, process)
+        
+        # Should be usable as dict key
+        test_dict = {state: 1.0}
+        self.assertEqual(test_dict[state], 1.0)
+
+
+class TestExperienceReplay(unittest.TestCase):
+    """Test experience replay buffer."""
+    
+    def setUp(self):
+        """Set up test fixtures."""
+        from ai_balancer import ReplayBuffer, Experience, SystemState
+        self.buffer = ReplayBuffer(capacity=100)
+        
+    def test_buffer_add(self):
+        """Test adding experiences."""
+        from ai_balancer import Experience, SystemState
+        state = SystemState((0,), (0,), 1, 1)
+        exp = Experience(state=state, action=0, reward=1.0, next_state=state, done=False)
+        
+        self.buffer.add(exp)
+        self.assertEqual(len(self.buffer), 1)
+        
+    def test_buffer_sample(self):
+        """Test sampling from buffer."""
+        from ai_balancer import Experience, SystemState
+        
+        # Add 10 experiences
+        for i in range(10):
+            state = SystemState((i % 3,), (0,), 1, 1)
+            exp = Experience(state=state, action=i % 4, reward=-1.0, next_state=state, done=False)
+            self.buffer.add(exp)
+            
+        # Sample batch
+        batch = self.buffer.sample(5)
+        self.assertEqual(len(batch), 5)
+        
+    def test_buffer_capacity(self):
+        """Test buffer respects capacity."""
+        from ai_balancer import Experience, SystemState
+        
+        # Add more than capacity
+        for i in range(150):
+            state = SystemState((i % 3,), (0,), 1, 1)
+            exp = Experience(state=state, action=0, reward=1.0, next_state=state, done=False)
+            self.buffer.add(exp)
+            
+        self.assertEqual(len(self.buffer), 100)
+
+
+# =============================================================================
 # TEST RUNNER
 # =============================================================================
 
@@ -1218,6 +1475,10 @@ def run_all_tests(verbosity=2):
         TestLeastLoadedBalancer,
         TestThresholdBasedBalancer,
         TestLoadBalancerFactory,
+        TestQLearningBalancer,
+        TestQLearningAgent,
+        TestStateEncoder,
+        TestExperienceReplay,
         TestSimulationEngine,
         TestSimulationResult,
         TestProcessMetrics,

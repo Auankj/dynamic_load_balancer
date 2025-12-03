@@ -953,6 +953,36 @@ class LoadBalancerGUI:
                                         state="readonly", width=18,
                                         font=(DEFAULT_FONT_FAMILY, 10))
         algorithm_combo.pack(pady=(5, 0))
+        algorithm_combo.bind("<<ComboboxSelected>>", self._on_algorithm_changed)
+        
+        # AI Training Mode toggle (shown only for Q-Learning)
+        self.ai_frame = tk.Frame(config_frame, bg=ModernColors.BG_CARD)
+        # Don't pack yet - will show/hide based on algorithm selection
+        
+        tk.Label(self.ai_frame, text="🤖 AI Mode",
+                font=(DEFAULT_FONT_FAMILY, 10),
+                bg=ModernColors.BG_CARD,
+                fg=ModernColors.TEXT_SECONDARY).pack(anchor=tk.W)
+        
+        ai_inner = tk.Frame(self.ai_frame, bg=ModernColors.BG_CARD)
+        ai_inner.pack(pady=(5, 0))
+        
+        self.ai_training_var = tk.BooleanVar(value=True)
+        self.ai_train_radio = tk.Radiobutton(ai_inner, text="Train",
+                                              variable=self.ai_training_var, value=True,
+                                              bg=ModernColors.BG_CARD, fg=ModernColors.TEXT_PRIMARY,
+                                              selectcolor=ModernColors.BG_INPUT,
+                                              activebackground=ModernColors.BG_CARD,
+                                              font=(DEFAULT_FONT_FAMILY, 9))
+        self.ai_train_radio.pack(side=tk.LEFT)
+        
+        self.ai_exploit_radio = tk.Radiobutton(ai_inner, text="Exploit",
+                                                variable=self.ai_training_var, value=False,
+                                                bg=ModernColors.BG_CARD, fg=ModernColors.TEXT_PRIMARY,
+                                                selectcolor=ModernColors.BG_INPUT,
+                                                activebackground=ModernColors.BG_CARD,
+                                                font=(DEFAULT_FONT_FAMILY, 9))
+        self.ai_exploit_radio.pack(side=tk.LEFT, padx=(5, 0))
         
         # Speed control
         speed_frame = tk.Frame(config_frame, bg=ModernColors.BG_CARD)
@@ -1316,6 +1346,16 @@ class LoadBalancerGUI:
         """Update the speed label when slider changes."""
         self.speed_label.config(text=f"{self.speed_var.get()}%")
     
+    def _on_algorithm_changed(self, event=None):
+        """Handle algorithm selection change - show/hide AI controls."""
+        algo_name = self.algorithm_var.get()
+        if algo_name == LoadBalancingAlgorithm.Q_LEARNING.value:
+            # Show AI controls
+            self.ai_frame.pack(side=tk.LEFT, padx=(0, 30))
+        else:
+            # Hide AI controls
+            self.ai_frame.pack_forget()
+    
     # =========================================================================
     # SIMULATION CONTROL METHODS
     # =========================================================================
@@ -1342,6 +1382,15 @@ class LoadBalancerGUI:
         if not self.engine.initialize(algorithm=algorithm):
             messagebox.showerror("Error", "Failed to initialize simulation")
             return
+        
+        # Configure AI mode if Q-Learning is selected
+        if algorithm == LoadBalancingAlgorithm.Q_LEARNING:
+            training_mode = self.ai_training_var.get()
+            if hasattr(self.engine.load_balancer, 'set_training_mode'):
+                self.engine.load_balancer.set_training_mode(training_mode)
+                # Try to load existing model
+                if hasattr(self.engine.load_balancer, 'load_model'):
+                    self.engine.load_balancer.load_model()
         
         # Clear previous data
         self.gantt_data.clear()
@@ -1498,12 +1547,34 @@ class LoadBalancerGUI:
                     utilization=proc_data['utilization']
                 )
         
+        # Update AI stats if using Q-Learning
+        if self.engine and hasattr(self.engine.load_balancer, 'get_statistics'):
+            self._update_ai_stats()
+        
         # Update process table
         self._update_process_table()
         
         # Update Gantt chart more frequently (every 2 time units or when there's data)
         if state['time'] % 2 == 0 or state['time'] <= 5:
             self._update_gantt_chart()
+    
+    def _update_ai_stats(self):
+        """Update AI statistics display during simulation."""
+        if not self.engine or not hasattr(self.engine.load_balancer, 'get_statistics'):
+            return
+        
+        stats = self.engine.load_balancer.get_statistics()
+        
+        # Update status label with AI info when running Q-Learning
+        algo_name = self.algorithm_var.get()
+        if algo_name == LoadBalancingAlgorithm.Q_LEARNING.value:
+            mode = "Training" if stats.get('training_mode', True) else "Exploiting"
+            epsilon = stats.get('epsilon', 0) * 100
+            q_states = stats.get('q_table_size', 0)
+            self.status_label.config(
+                text=f"🤖 {mode} (ε={epsilon:.1f}%, Q-states={q_states})",
+                fg=ModernColors.PRIMARY if stats.get('training_mode') else ModernColors.SUCCESS
+            )
     
     def _handle_completion(self, result):
         """Handle simulation completion."""
@@ -1520,6 +1591,23 @@ class LoadBalancerGUI:
         
         # Final process table update
         self._update_process_table()
+        
+        # Save AI model if using Q-Learning
+        algo_name = self.algorithm_var.get()
+        if algo_name == LoadBalancingAlgorithm.Q_LEARNING.value:
+            if self.engine and hasattr(self.engine.load_balancer, 'save_model'):
+                self.engine.load_balancer.save_model()
+                ai_stats = ""
+                if hasattr(self.engine.load_balancer, 'get_statistics'):
+                    stats = self.engine.load_balancer.get_statistics()
+                    ai_stats = f"\n\n🤖 AI Stats:\nEpisodes: {stats.get('episode_count', 0)}\nQ-States: {stats.get('q_table_size', 0)}\nExploration: {stats.get('epsilon', 0)*100:.1f}%"
+                messagebox.showinfo("Simulation Complete", 
+                               f"Simulation completed in {result.total_time} time units.\n"
+                               f"Completed: {metrics.completed_processes}/{metrics.total_processes} processes\n"
+                               f"Average Turnaround: {metrics.avg_turnaround_time:.2f}\n"
+                               f"Average Utilization: {metrics.avg_utilization*100:.1f}%"
+                               f"{ai_stats}\n\n✅ AI model saved!")
+                return
         
         messagebox.showinfo("Simulation Complete", 
                            f"Simulation completed in {result.total_time} time units.\n"
