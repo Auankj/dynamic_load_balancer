@@ -388,14 +388,13 @@ dynamic_load_balancer/
 ├── load_balancer.py     # Load balancing algorithms (Strategy pattern)
 ├── ai_balancer.py       # AI Q-Learning load balancer with RL agent
 ├── simulation.py        # SimulationEngine and SimulationResult
-├── metrics.py           # ProcessMetrics, ProcessorMetrics, SystemMetrics
+├── metrics.py           # ProcessMetrics, ProcessorMetrics, 
 ├── gui.py               # Full Tkinter GUI with Matplotlib integration
 ├── utils.py             # SimulationLogger, DataExporter utilities
 ├── validators.py        # Input validation and error handling
 ├── test_suite.py        # Comprehensive test suite (100+ tests)
 ├── requirements.txt     # Python dependencies
 ├── README.md            # This documentation
-└── project.xml          # Project specification
 ```
 
 ### Module Details
