@@ -1,856 +1,492 @@
-# Dynamic Load Balancing in Multiprocessor Systems
+# 🚀 Dynamic Load Balancing in Multiprocessor Systems
 
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
-[![Tests](https://img.shields.io/badge/Tests-115%20Passing-success.svg)](test_suite.py)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Coverage](https://img.shields.io/badge/Coverage-Comprehensive-brightgreen.svg)](test_suite.py)
+<div align="center">
 
-A production-grade educational simulation demonstrating dynamic load balancing algorithms in multiprocessor systems. This project visualizes how operating systems distribute workloads across multiple CPUs to optimize performance and resource utilization.
+[![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/downloads/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![Tests](https://img.shields.io/badge/Tests-125%20Passing-28A745?style=for-the-badge&logo=pytest&logoColor=white)](test_suite.py)
+[![License](https://img.shields.io/badge/License-MIT-FFC107?style=for-the-badge)](LICENSE)
 
-## 📋 Table of Contents
+**A production-grade simulator for dynamic load balancing algorithms with AI-powered optimization**
 
-- [Overview](#-overview)
-- [Features](#-features)
-- [Architecture](#-architecture)
-- [Installation](#-installation)
-- [Usage](#-usage)
-- [Load Balancing Algorithms](#-load-balancing-algorithms)
-- [Project Structure](#-project-structure)
-- [Performance Metrics](#-performance-metrics)
-- [Testing](#-testing)
-- [API Reference](#-api-reference)
-- [Configuration](#-configuration)
-- [Contributing](#-contributing)
-- [License](#-license)
+[Quick Start](#-quick-start) • [Features](#-features) • [Algorithms](#-load-balancing-algorithms) • [Documentation](#-api-reference) • [Contributing](#-contributing)
 
-## 🎯 Overview
+</div>
 
-In modern computing systems, multiple processors (CPUs/cores) work together to execute tasks. **Load balancing** is the process of distributing workloads across these processors to:
+---
 
-- **Maximize throughput** - Complete more work in less time
-- **Minimize response time** - Users get faster responses
-- **Optimize resource utilization** - All processors stay busy
-- **Prevent bottlenecks** - No single processor gets overwhelmed
-
-This simulator allows you to visualize and compare different load balancing strategies in real-time with a comprehensive GUI, detailed metrics, and export capabilities.
-
-## ✨ Features
-
-### Core Simulation Engine
-- **Multi-Processor Simulation** - Configure 2-16 virtual processors with customizable speed
-- **Process Generation** - Create processes with random or custom attributes (burst time, priority, memory)
-- **Discrete Event Simulation** - Accurate time-stepped simulation with configurable speed
-- **Multiple Algorithms** - Compare Round Robin, Least Loaded, Threshold-Based, Q-Learning, and DQN strategies
-- **AI-Powered Balancing** - Q-Learning (discrete states) and Deep Q-Network (continuous states) with PyTorch
-- **Process Migration** - Dynamic process movement between processors for optimal balance
-
-### Rich Visualization
-- **Real-Time Load Bars** - Color-coded processor load visualization (green→yellow→red)
-- **Process Queue Display** - Live view of pending and executing processes
-- **Performance Dashboard** - Live metrics cards with key statistics
-- **Embedded Charts** - Matplotlib-powered graphs for:
-  - Processor utilization over time
-  - Load balance distribution
-  - Process completion timeline
-  - Algorithm comparison
-
-### Comprehensive Analytics
-- **Process Metrics** - Turnaround time, waiting time, response time per process
-- **Processor Metrics** - CPU utilization, queue length, throughput per processor
-- **System Metrics** - Load variance, Jain's fairness index, total migrations
-- **Data Export** - Export results to JSON and CSV formats
-
-### Robust Architecture
-- **Validation Framework** - Input validation and sanitization
-- **Error Handling** - Graceful error recovery with detailed logging
-- **Thread-Safe** - Non-blocking GUI with background simulation
-- **91 Unit Tests** - Comprehensive test coverage
-### Data Management
-- **Simulation Logging** - Detailed event logging with severity levels
-- **Results History** - Track multiple simulation runs
-- **Comparison Reports** - Side-by-side algorithm analysis
-
-## 🏗️ Architecture
-
-The project follows a modular architecture with clear separation of concerns:
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                          GUI Layer                                │
-│                         (gui.py)                                  │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌────────────┐ │
-│  │ Load Bars   │ │  Metrics    │ │   Charts    │ │  Controls  │ │
-│  └─────────────┘ └─────────────┘ └─────────────┘ └────────────┘ │
-└─────────────────────────────────┬────────────────────────────────┘
-                                  │
-┌─────────────────────────────────▼────────────────────────────────┐
-│                     Simulation Layer                              │
-│                    (simulation.py)                                │
-│  ┌─────────────────────────────────────────────────────────────┐ │
-│  │              SimulationEngine                                │ │
-│  │   - Time management  - Event processing  - State control    │ │
-│  └─────────────────────────────────────────────────────────────┘ │
-└───────┬───────────────────┬───────────────────┬──────────────────┘
-        │                   │                   │
-┌───────▼───────┐   ┌───────▼───────┐   ┌───────▼───────┐
-│ Load Balancer │   │  Processor    │   │   Metrics     │
-│ (load_bal.py) │   │ (processor.py)│   │  (metrics.py) │
-│               │   │               │   │               │
-│ - RoundRobin  │   │ - Execution   │   │ - Process     │
-│ - LeastLoaded │   │ - Queue Mgmt  │   │ - Processor   │
-│ - Threshold   │   │ - Migration   │   │ - System      │
-└───────┬───────┘   └───────┬───────┘   └───────────────┘
-        │                   │
-┌───────▼───────────────────▼───────┐
-│          Core Layer               │
-│  (config.py, process.py, utils.py)│
-│                                   │
-│  - Configuration management       │
-│  - Process data structures        │
-│  - Logging and export utilities   │
-│  - Validation (validators.py)     │
-└───────────────────────────────────┘
-```
-
-### Design Patterns Used
-
-| Pattern | Implementation | Purpose |
-|---------|----------------|---------|
-| **Strategy** | LoadBalancer ABC with concrete implementations | Swappable algorithms |
-| **Factory** | LoadBalancerFactory | Algorithm instantiation |
-| **Observer** | GUI callbacks on simulation events | Real-time updates |
-| **Singleton** | SimulationLogger | Centralized logging |
-| **State** | ProcessState, SimulationState enums | Clear state management |
-
-## 🚀 Installation
-
-### Prerequisites
-- Python 3.8 or higher
-- Tkinter (usually included with Python)
-- Matplotlib for embedded charts
-
-### Quick Start
+## 🎬 Quick Start
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/dynamic_load_balancer.git
+git clone https://github.com/Auankj/dynamic_load_balancer.git
 cd dynamic_load_balancer
 
-# Create and activate virtual environment (recommended)
+# Create virtual environment
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Run the application
-python main.py
-
-# Or run tests first to verify installation
-python test_suite.py
-```
-
-### Windows Notes
-
-- Virtual environment activation (PowerShell):
-
-```powershell
-python -m venv venv
-.\venv\Scripts\Activate.ps1
-```
-
-- Virtual environment activation (Command Prompt):
-
-```bat
-python -m venv venv
-venv\Scripts\activate.bat
-```
-
-- The GUI enables DPI awareness on modern Windows versions automatically to improve scaling on high-DPI displays. If you encounter scaling issues, try launching the app from PowerShell or Command Prompt after activating the virtual environment.
-
-- The application also selects a platform-appropriate default font (Segoe UI on Windows, Helvetica on macOS, DejaVu Sans on Linux) and includes improved mouse-wheel handling across platforms for scrollable panes.
-
-### Dependencies
-
-| Package | Version | Purpose |
-|---------|---------|---------|
-| matplotlib | ≥3.5.0 | Chart rendering |
-| numpy | ≥1.21.0 | Numerical operations |
-| torch | ≥2.0.0 | Deep Q-Network (DQN) neural networks |
-| torchvision | ≥0.15.0 | PyTorch utilities |
-| tkinter | (built-in) | GUI framework |
-
-## 📖 Usage
-
-### GUI Mode (Default)
-```bash
+# Launch the GUI
 python main.py
 ```
 
-The graphical interface provides:
-1. **Configuration Panel** - Set processors (2-16), processes (1-100), algorithm
-2. **Processor Visualization** - Real-time load bars with color coding
-3. **Metrics Dashboard** - Live statistics and performance indicators
-4. **Chart View** - Embedded Matplotlib charts for analysis
-5. **Control Panel** - Start/Stop/Pause/Reset/Step controls
-6. **Export Options** - Save results to JSON/CSV
+<details>
+<summary>🖼️ <b>Screenshot Preview</b></summary>
 
-### CLI Mode
-```bash
-python main.py --cli
-```
+The GUI features:
+- Real-time processor load visualization with color-coded bars
+- Interactive Gantt chart showing process execution timeline
+- Live metrics dashboard with performance statistics
+- Algorithm comparison with side-by-side analysis
 
-Runs a quick simulation in the terminal for testing and automation.
-
-### Run Tests
-```bash
-# Run all 91 tests
-python test_suite.py
-
-# Or with verbose output
-python -m pytest test_suite.py -v
-
-# Run specific test class
-python -m pytest test_suite.py::TestLoadBalancers -v
-```
-
-### Command Line Options
-```bash
-python main.py --help
-
-Options:
-  --cli              Run in command-line mode (no GUI)
-  --test             Run module self-tests
-  --processors, -p   Number of processors (default: 4)
-  --processes, -n    Number of processes (default: 20)
-  --algorithm, -a    Load balancing algorithm: rr, round_robin, ll, least_loaded, tb, threshold
-  --version, -v      Show version information
-```
-
-### Example Sessions
-
-```bash
-# Quick simulation with 8 processors using threshold algorithm
-python main.py --cli -p 8 -n 50 -a tb
-
-# CLI with least loaded algorithm
-python main.py --cli -p 6 -n 30 -a ll
-
-# Run validation tests
-python test_suite.py
-```
-
-## ⚖️ Load Balancing Algorithms
-
-### 1. Round Robin (`round_robin`)
-**How it works:** Distributes processes to processors in a cyclic manner (P0→P1→P2→P3→P0→...).
-
-```python
-# Simplified logic
-def assign(self, process, processors):
-    processor = processors[self.current_index]
-    self.current_index = (self.current_index + 1) % len(processors)
-    return processor
-```
-
-| Pros | Cons |
-|------|------|
-| Simple and predictable | Ignores actual load |
-| Zero monitoring overhead | Can create imbalance |
-| Equal distribution by count | Poor for varied workloads |
-
-**Best for:** Homogeneous workloads with similar process sizes
-
-**Time Complexity:** O(1) assignment
+</details>
 
 ---
 
-### 2. Least Loaded First (`least_loaded`)
-**How it works:** Assigns each new process to the processor with the lowest current load.
+## 🎯 Overview
+
+**Load balancing** is a critical operating system technique that distributes workloads across multiple processors to maximize efficiency. This simulator provides:
+
+| Goal | Description |
+|------|-------------|
+| 🚀 **Maximize Throughput** | Complete more work in less time |
+| ⚡ **Minimize Response Time** | Users get faster responses |
+| ⚖️ **Optimize Utilization** | All processors stay busy |
+| 🛡️ **Prevent Bottlenecks** | No single processor gets overwhelmed |
+
+---
+
+## ✨ Features
+
+### 🎮 Core Simulation Engine
+| Feature | Description |
+|---------|-------------|
+| **Multi-Processor** | Configure 2-16 virtual processors with customizable speed |
+| **Process Types** | CPU-bound, I/O-bound, Real-time, Batch, Interactive |
+| **Workload Patterns** | Uniform, Bursty, Poisson, Diurnal, Spike, Wave |
+| **5 Algorithms** | Round Robin, Least Loaded, Threshold, Q-Learning, DQN |
+| **AI-Powered** | Deep reinforcement learning with PyTorch (GPU accelerated) |
+| **Process Migration** | Dynamic load rebalancing across processors |
+
+### 🤖 AI Load Balancing
+| Feature | Description |
+|---------|-------------|
+| **Q-Learning** | Discrete state-space reinforcement learning |
+| **Deep Q-Network (DQN)** | Neural network with experience replay |
+| **Double DQN** | Reduced overestimation bias |
+| **Prioritized Replay** | Focus on important experiences |
+| **Model Persistence** | Save/load trained models automatically |
+
+### 📊 Advanced Simulation
+| Feature | Description |
+|---------|-------------|
+| **Process Types** | CPU_BOUND, IO_BOUND, MIXED, REAL_TIME, BATCH, INTERACTIVE |
+| **Workload Patterns** | UNIFORM, BURSTY, POISSON, DIURNAL, SPIKE, GRADUAL_RAMP, WAVE |
+| **Advanced Processors** | Multi-level feedback queue, cache simulation, power states |
+| **Scenario System** | Predefined and custom simulation scenarios |
+| **SLA Tracking** | Service Level Agreement metrics and violations |
+
+### 🎨 Rich Visualization
+- **Real-Time Load Bars** — Color-coded processor visualization (green→yellow→red)
+- **Gantt Chart** — Interactive process execution timeline with tooltips
+- **Performance Dashboard** — Live metrics with trend indicators
+- **Algorithm Comparison** — Side-by-side analysis with charts
+
+### 📈 Comprehensive Analytics
+- **Process Metrics** — Turnaround time, waiting time, response time
+- **Processor Metrics** — CPU utilization, queue length, throughput
+- **System Metrics** — Load variance, Jain's fairness index, migrations
+- **Data Export** — JSON and CSV export for external analysis
+
+---
+
+## 🏗️ Architecture
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│                           GUI Layer                                 │
+│                          (gui.py)                                   │
+│   ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────────┐  │
+│   │ Load Bars  │ │  Metrics   │ │   Charts   │ │   Controls     │  │
+│   └────────────┘ └────────────┘ └────────────┘ └────────────────┘  │
+└────────────────────────────────┬───────────────────────────────────┘
+                                 │
+┌────────────────────────────────▼───────────────────────────────────┐
+│                       Simulation Layer                              │
+│           (simulation.py / enhanced_simulation.py)                  │
+│   ┌────────────────────────────────────────────────────────────┐   │
+│   │                    SimulationEngine                         │   │
+│   │    Time Management • Event Processing • State Control       │   │
+│   └────────────────────────────────────────────────────────────┘   │
+└──────┬──────────────────┬───────────────────┬──────────────────────┘
+       │                  │                   │
+┌──────▼──────┐   ┌───────▼───────┐   ┌───────▼───────┐
+│Load Balancer│   │   Processor   │   │    Metrics    │
+│             │   │               │   │               │
+│• RoundRobin │   │• Execution    │   │• Process      │
+│• LeastLoaded│   │• Queue Mgmt   │   │• Processor    │
+│• Threshold  │   │• Migration    │   │• System       │
+│• Q-Learning │   │• Power States │   │• SLA Tracking │
+│• DQN        │   │• Cache Sim    │   │               │
+└──────┬──────┘   └───────┬───────┘   └───────────────┘
+       │                  │
+┌──────▼──────────────────▼──────┐
+│          Core Layer            │
+│   config.py • process.py       │
+│   utils.py • validators.py     │
+│   advanced_simulation.py       │
+│   integration.py               │
+└────────────────────────────────┘
+```
+
+### Design Patterns
+
+| Pattern | Implementation | Purpose |
+|---------|----------------|---------|
+| **Strategy** | LoadBalancer ABC | Swappable algorithms |
+| **Factory** | LoadBalancerFactory | Algorithm instantiation |
+| **Observer** | GUI callbacks | Real-time updates |
+| **Builder** | ScenarioBuilder | Custom scenario creation |
+| **Singleton** | SimulationLogger | Centralized logging |
+
+---
+
+## ⚖️ Load Balancing Algorithms
+
+### Quick Comparison
+
+| Algorithm | Speed | Balance | Adaptability | Best For |
+|-----------|:-----:|:-------:|:------------:|----------|
+| **Round Robin** | ⭐⭐⭐ | ⭐ | ⭐ | Uniform workloads |
+| **Least Loaded** | ⭐⭐ | ⭐⭐⭐ | ⭐⭐ | Variable workloads |
+| **Threshold** | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | Dynamic environments |
+| **Q-Learning** | ⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | Pattern-rich workloads |
+| **DQN** | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ | Complex continuous states |
+
+### 1. Round Robin
+> Distributes processes cyclically: P0→P1→P2→P3→P0...
 
 ```python
-# Simplified logic
+def assign(self, process, processors):
+    target = processors[self.current_index]
+    self.current_index = (self.current_index + 1) % len(processors)
+    return target
+```
+
+✅ Simple, predictable, zero overhead  
+❌ Ignores actual load, can create imbalance
+
+---
+
+### 2. Least Loaded First
+> Assigns to the processor with the lowest current load
+
+```python
 def assign(self, process, processors):
     return min(processors, key=lambda p: p.current_load)
 ```
 
-| Pros | Cons |
-|------|------|
-| Optimal load distribution | O(n) per assignment |
-| Adapts to current state | Requires load monitoring |
-| Efficient for varied work | Slightly higher overhead |
-
-**Best for:** Variable workloads with different burst times
-
-**Time Complexity:** O(n) assignment where n = number of processors
+✅ Optimal distribution, adapts to state  
+❌ O(n) per assignment, monitoring overhead
 
 ---
 
-### 3. Threshold-Based (`threshold`)
-**How it works:** Monitors processor loads and migrates processes when load difference exceeds threshold.
+### 3. Threshold-Based
+> Migrates processes when load difference exceeds threshold
 
 ```python
-# Simplified logic
 def check_balance(self, processors):
     loads = [p.current_load for p in processors]
     if max(loads) - min(loads) > self.threshold:
         self.migrate_process(overloaded, underloaded)
 ```
 
-| Pros | Cons |
-|------|------|
-| Dynamic rebalancing | Migration has cost |
-| Handles changing loads | Needs threshold tuning |
-| Prevents severe imbalance | More complex logic |
-
-**Best for:** Dynamic workloads where load changes over time
-
-**Time Complexity:** O(n) monitoring + O(1) migration decision
+✅ Dynamic rebalancing, prevents severe imbalance  
+❌ Migration has cost, needs threshold tuning
 
 ---
 
-### 4. AI Q-Learning (`q_learning`)
-**How it works:** Uses reinforcement learning to learn optimal process assignments through experience.
+### 4. Q-Learning (AI)
+> Learns optimal assignments through reinforcement learning
 
 ```python
-# Simplified logic
 def assign(self, process, processors):
-    state = encode_state(processors, process)
-    if training and random() < epsilon:
-        action = random_processor()  # Exploration
+    state = self.encode_state(processors, process)
+    if self.training and random() < self.epsilon:
+        action = random_choice(len(processors))  # Explore
     else:
-        action = argmax(Q[state])    # Exploitation
+        action = argmax(self.Q[state])           # Exploit
     return processors[action]
-
-def learn(self, reward, next_state):
-    Q[state][action] += α * (reward + γ * max(Q[next_state]) - Q[state][action])
 ```
 
-| Pros | Cons |
-|------|------|
-| Learns optimal strategy | Needs training time |
-| Adapts to workload patterns | Higher memory usage |
-| Improves over time | Initial random behavior |
-| Can outperform static algorithms | Requires hyperparameter tuning |
-
-**Best for:** Complex, evolving workloads with learnable patterns
-
-**Key Components:**
-- **State:** Discretized processor loads + queue sizes + process characteristics
-- **Action:** Processor selection (0 to N-1)
-- **Reward:** Negative turnaround time + fairness bonus - migration penalty
-- **Q-Table:** State-action value function
-
-**Time Complexity:** O(1) assignment (Q-table lookup)
-
-#### Train vs Exploit Mode
-
-The AI balancer supports two operational modes, selectable via the GUI:
-
-| Aspect | 🎓 Train Mode | 🎯 Exploit Mode |
-|--------|---------------|-----------------|
-| **Purpose** | Learn optimal strategies | Use learned knowledge |
-| **Exploration (ε)** | Starts at 100%, decays to 5% | Fixed at 1% |
-| **Behavior** | Tries random actions to discover better strategies | Almost always picks the best known action |
-| **Q-Table Updates** | Active learning from every decision | Continues learning (at slower rate) |
-| **Performance** | Initially poor, improves over time | Stable, uses trained policy |
-| **When to Use** | First runs, new workload patterns | After sufficient training |
-| **Recommended** | 500-2000+ process assignments | After training is complete |
-
-**Training Workflow:**
-1. **Start in Train Mode** - Let the AI explore different processor assignments
-2. **Run multiple simulations** - More processes = better learning
-3. **Watch ε decay** - As epsilon decreases, random exploration reduces
-4. **Switch to Exploit** - Once ε is low (< 10%), the AI has learned
-5. **Compare performance** - Trained AI should match or beat other algorithms
-
-**Model Persistence:**
-- Models auto-save to `output/q_learning_model.pkl` when simulation completes
-- Trained models are automatically loaded on startup
-- Use Exploit mode to leverage previously trained models
+✅ Learns optimal strategy, improves over time  
+❌ Needs training, initial random behavior
 
 ---
 
-### 5. Deep Q-Network (`dqn`)
-**How it works:** Uses deep neural networks to approximate the Q-function, enabling learning in continuous state spaces without discretization.
+### 5. Deep Q-Network (DQN)
+> Neural network approximates Q-function for continuous states
 
 ```python
-# Simplified architecture
 class DQNetwork(nn.Module):
     def __init__(self, state_dim, action_dim):
         self.fc1 = nn.Linear(state_dim, 128)
         self.fc2 = nn.Linear(128, 256)
         self.fc3 = nn.Linear(256, 128)
         self.out = nn.Linear(128, action_dim)
-    
-    def forward(self, x):
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
-        return self.out(x)
-
-# Decision making
-def assign(self, process, processors):
-    state = encode_continuous_state(processors, process)
-    with torch.no_grad():
-        q_values = network(state)
-        action = q_values.argmax().item()
-    return processors[action]
 ```
 
-| Pros | Cons |
-|------|------|
-| Handles continuous states | Requires PyTorch (larger dependency) |
-| Better generalization | More computationally intensive |
-| Scales to complex scenarios | Needs GPU for large-scale training |
-| State-of-the-art RL approach | Hyperparameter sensitive |
+✅ Handles continuous states, excellent generalization  
+❌ Requires PyTorch, more computationally intensive
 
-**Best for:** Complex workloads with continuous state variables and large state spaces
+---
 
-**Key Components:**
-- **Neural Network:** 3-layer MLP (128→256→128 hidden units)
-- **Experience Replay:** Stores past experiences for stable training
-- **Target Network:** Separate network for stable Q-value targets
-- **Double DQN:** Uses online network to select actions, target network to evaluate
-- **Prioritized Replay:** Samples important experiences more frequently
+### 🎓 AI Training Guide
 
-**Time Complexity:** O(1) assignment (neural network forward pass)
+| Mode | Exploration (ε) | Purpose | When to Use |
+|------|-----------------|---------|-------------|
+| **Train** | 100% → 5% | Learn optimal strategies | First runs, new patterns |
+| **Exploit** | Fixed 1% | Use learned knowledge | After training complete |
 
-#### DQN Architecture
+**Recommended Training:**
+- Q-Learning: 500-2000+ process assignments
+- DQN: 1000-5000+ process assignments
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        DQN Agent                                 │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌─────────────────┐    ┌─────────────────┐                     │
-│  │  Online Network │    │  Target Network │ (soft update τ)     │
-│  │  (training)     │───▶│  (stable Q)     │                     │
-│  └────────┬────────┘    └─────────────────┘                     │
-│           │                                                      │
-│  ┌────────▼────────────────────────────────────────────┐        │
-│  │              Prioritized Experience Replay           │        │
-│  │   ┌─────────────────────────────────────────────┐   │        │
-│  │   │ (state, action, reward, next_state, done)   │   │        │
-│  │   │ Priority-based sampling with IS weights     │   │        │
-│  │   └─────────────────────────────────────────────┘   │        │
-│  └─────────────────────────────────────────────────────┘        │
-└─────────────────────────────────────────────────────────────────┘
-
-State Encoding (Continuous):
-┌──────────────────────────────────────────────────────────────────┐
-│ [proc_0_load, proc_0_queue, proc_1_load, proc_1_queue, ...]      │
-│ [..., proc_N_load, proc_N_queue, burst_norm, priority_norm]      │
-└──────────────────────────────────────────────────────────────────┘
-```
-
-#### DQN vs Q-Learning Comparison
-
-| Aspect | Q-Learning | DQN |
-|--------|------------|-----|
-| **State Space** | Discrete (binned) | Continuous (raw values) |
-| **Q-Function** | Lookup table | Neural network |
-| **Memory** | O(states × actions) | Fixed network parameters |
-| **Generalization** | Only seen states | Interpolates unseen states |
-| **Training Stability** | Stable | Requires target network |
-| **Dependencies** | NumPy only | PyTorch required |
-| **Best For** | Simple, finite states | Complex, continuous states |
-
-#### DQN Train vs Exploit Mode
-
-| Aspect | 🎓 Train Mode | 🎯 Exploit Mode |
-|--------|---------------|-----------------|
-| **Purpose** | Learn optimal neural network weights | Use trained network |
-| **Exploration (ε)** | Starts at 100%, decays to 5% | Fixed at 1% |
-| **Network Updates** | Active backpropagation | No weight updates |
-| **Target Network** | Soft updates every step | Frozen |
-| **Experience Replay** | Active collection and sampling | Minimal collection |
-| **Performance** | Improves over episodes | Stable, optimized |
-| **Recommended Training** | 1000-5000+ process assignments | After training |
-
-**DQN Training Tips:**
-1. **Patience** - DQN needs more samples than Q-Learning initially
-2. **Batch Size** - Default 64 works well, increase for more stability
-3. **Learning Rate** - 0.001 default, reduce if training is unstable
-4. **Target Update (τ)** - 0.005 for soft updates, balances stability/speed
-5. **Replay Buffer** - 100,000 capacity, larger is better for diverse experience
-
-**Model Persistence:**
-- Models auto-save to `output/dqn_model.pt` when simulation completes
-- Includes network weights, optimizer state, and configuration
-- Trained models are automatically loaded on startup
-- Use Exploit mode to leverage previously trained models
-
-### Algorithm Comparison
-
-| Metric | Round Robin | Least Loaded | Threshold | Q-Learning | DQN |
-|--------|-------------|--------------|-----------|------------|-----|
-| **Assignment Speed** | ⭐⭐⭐ Fastest | ⭐⭐ Medium | ⭐⭐ Medium | ⭐⭐⭐ Fast | ⭐⭐ Medium |
-| **Load Balance** | ⭐ Poor | ⭐⭐⭐ Good | ⭐⭐⭐ Best | ⭐⭐⭐ Adaptive | ⭐⭐⭐ Best* |
-| **Adaptability** | ⭐ None | ⭐⭐ Reactive | ⭐⭐⭐ Proactive | ⭐⭐⭐ Learning | ⭐⭐⭐ Deep Learning |
-| **Overhead** | ⭐⭐⭐ Minimal | ⭐⭐ Low | ⭐ Higher | ⭐⭐ Medium | ⭐ Higher** |
-| **Generalization** | ⭐ None | ⭐ None | ⭐⭐ Some | ⭐⭐ Limited | ⭐⭐⭐ Excellent |
-| **Best Scenario** | Uniform tasks | Mixed tasks | Dynamic loads | Pattern-rich | Complex/Continuous |
-
-*After sufficient training with diverse workloads
-**Requires PyTorch and more memory; benefits from GPU acceleration
+---
 
 ## 📁 Project Structure
 
 ```
 dynamic_load_balancer/
-├── main.py              # Application entry point with CLI parsing
-├── config.py            # Configuration classes, enums, and constants
-├── process.py           # Process dataclass and ProcessGenerator
-├── processor.py         # Processor class and ProcessorManager
-├── load_balancer.py     # Load balancing algorithms (Strategy pattern)
-├── ai_balancer.py       # AI Q-Learning load balancer with RL agent
-├── dqn_balancer.py      # Deep Q-Network load balancer with PyTorch
-├── simulation.py        # SimulationEngine and SimulationResult
-├── metrics.py           # ProcessMetrics, ProcessorMetrics,
-├── gui.py               # Full Tkinter GUI with Matplotlib integration
-├── utils.py             # SimulationLogger, DataExporter utilities
-├── validators.py        # Input validation and error handling
-├── test_suite.py        # Comprehensive test suite (100+ tests)
-├── requirements.txt     # Python dependencies
-├── README.md            # This documentation
+├── 🎯 Core Modules
+│   ├── main.py                 # Application entry point
+│   ├── config.py               # Configuration and constants
+│   ├── process.py              # Process model and generator
+│   ├── processor.py            # Processor execution logic
+│   └── simulation.py           # Standard simulation engine
+│
+├── 🤖 AI Modules
+│   ├── load_balancer.py        # Algorithm implementations
+│   ├── ai_balancer.py          # Q-Learning balancer
+│   └── dqn_balancer.py         # Deep Q-Network balancer
+│
+├── 🚀 Advanced Simulation
+│   ├── advanced_simulation.py  # Enhanced process/processor models
+│   ├── enhanced_simulation.py  # Production-grade engine
+│   └── integration.py          # Scenario management
+│
+├── 📊 Support Modules
+│   ├── metrics.py              # Performance metrics
+│   ├── gui.py                  # Tkinter GUI
+│   ├── utils.py                # Logging and export
+│   └── validators.py           # Input validation
+│
+├── 🧪 Testing
+│   └── test_suite.py           # 125 comprehensive tests
+│
+└── 📄 Documentation
+    ├── README.md               # This file
+    └── requirements.txt        # Dependencies
 ```
 
-### Module Details
+### Module Overview
 
-| Module | Lines | Classes | Description |
-|--------|-------|---------|-------------|
-| `config.py` | ~420 | 5 | SimulationConfig, GUIConfig, ProcessState, ProcessPriority, LoadBalancerType |
-| `process.py` | ~750 | 2 | Process dataclass with lifecycle, ProcessGenerator for creating workloads |
-| `processor.py` | ~975 | 2 | Processor execution logic, ProcessorManager for multi-processor coordination |
-| `load_balancer.py` | ~810 | 5 | LoadBalancer ABC, RoundRobin, LeastLoaded, ThresholdBased, Factory |
-| `ai_balancer.py` | ~1245 | 6 | QLearningAgent, StateEncoder, ExperienceReplay, QLearningBalancer |
-| `dqn_balancer.py` | ~1700 | 7 | DQNAgent, DQNetwork, DuelingDQN, PrioritizedReplay, DQNBalancer |
-| `simulation.py` | ~760 | 3 | SimulationEngine, SimulationState enum, SimulationResult |
-| `metrics.py` | ~870 | 4 | ProcessMetrics, ProcessorMetrics, SystemMetrics, MetricsCalculator |
-| `gui.py` | ~1430 | 5 | LoadBalancerGUI, LoadBar, ProcessorWidget, MetricCard, ChartFrame |
-| `utils.py` | ~700 | 2 | SimulationLogger (singleton), DataExporter (JSON/CSV) |
-| `validators.py` | ~500 | 6 | ValidationError, ValidationResult, Config/Process/SimulationValidators |
-| `test_suite.py` | ~1800 | 22 | Comprehensive unit and integration tests |
+| Module | Purpose | Key Classes |
+|--------|---------|-------------|
+| `config.py` | Configuration | SimulationConfig, LoadBalancingAlgorithm |
+| `process.py` | Process model | Process, ProcessGenerator |
+| `processor.py` | Execution | Processor, ProcessorManager |
+| `load_balancer.py` | Algorithms | RoundRobin, LeastLoaded, Threshold |
+| `ai_balancer.py` | Q-Learning | QLearningAgent, StateEncoder |
+| `dqn_balancer.py` | Deep RL | DQNAgent, DQNetwork, PrioritizedReplay |
+| `advanced_simulation.py` | Advanced models | AdvancedProcess, AdvancedProcessor |
+| `enhanced_simulation.py` | Production engine | EnhancedSimulationEngine |
+| `integration.py` | Scenarios | ScenarioBuilder, PerformanceAnalyzer |
+
+---
+
+## 🎮 Predefined Scenarios
+
+| Scenario | Processors | Processes | Pattern | Description |
+|----------|:----------:|:---------:|---------|-------------|
+| **Basic** | 4 | 20 | Uniform | Standard simulation |
+| **CPU Intensive** | 8 | 30 | Uniform | Long-running computation |
+| **I/O Intensive** | 4 | 40 | Bursty | Frequent blocking |
+| **Mixed Workload** | 6 | 50 | Diurnal | Real-world simulation |
+| **Bursty Traffic** | 4 | 60 | Spike | Sudden load spikes |
+| **Real-Time** | 8 | 25 | Uniform | Strict deadlines |
+| **Stress Test** | 4 | 100 | Spike | Maximum load testing |
+
+---
 
 ## 📊 Performance Metrics
 
-### Process Metrics (per process)
+### Key Metrics
 
-| Metric | Formula | Description | Unit |
-|--------|---------|-------------|------|
-| **Arrival Time** | Given | When process enters system | time units |
-| **Start Time** | First execution | When process first runs | time units |
-| **Completion Time** | Last execution | When process finishes | time units |
-| **Turnaround Time** | `completion - arrival` | Total time in system | time units |
-| **Waiting Time** | `start - arrival` | Time spent in queue | time units |
-| **Response Time** | `first_run - arrival` | Time to first response | time units |
-
-### Processor Metrics (per processor)
-
-| Metric | Formula | Description | Range |
-|--------|---------|-------------|-------|
-| **CPU Utilization** | `busy_time / total_time × 100` | Percentage busy | 0-100% |
-| **Queue Length** | `len(waiting_queue)` | Current waiting processes | 0-∞ |
-| **Current Load** | `queue_length + remaining_work` | Combined workload | 0-∞ |
-| **Throughput** | `completed / total_time` | Processes per time unit | 0-∞ |
-| **Idle Time** | `total_time - busy_time` | Time with no work | time units |
-
-### System Metrics (aggregate)
-
-| Metric | Formula | Description | Range |
-|--------|---------|-------------|-------|
-| **Average Turnaround** | `Σ(turnaround) / n` | Mean turnaround time | 0-∞ |
-| **Average Waiting** | `Σ(waiting) / n` | Mean waiting time | 0-∞ |
-| **Load Variance** | `σ²(loads)` | Spread of processor loads | 0-∞ |
-| **Load Balance Index** | `1 - (max-min)/max` | Balance quality | 0-1 |
-| **Jain's Fairness** | `(Σx)² / (n × Σx²)` | Statistical fairness | 0-1 |
-| **Total Migrations** | Count | Process movements | 0-∞ |
-| **Throughput** | `completed / time` | System throughput | 0-∞ |
+| Metric | Formula | Description |
+|--------|---------|-------------|
+| **Turnaround Time** | `completion - arrival` | Total time in system |
+| **Waiting Time** | `start - arrival` | Time in queue |
+| **Response Time** | `first_run - arrival` | Time to first execution |
+| **CPU Utilization** | `busy_time / total_time` | Processor efficiency |
+| **Throughput** | `completed / time` | Processes per time unit |
+| **Jain's Fairness** | `(Σx)² / (n × Σx²)` | Load distribution fairness |
 
 ### Jain's Fairness Index
 
-A widely-used metric for evaluating fairness in resource allocation:
-
 $$J(x_1, x_2, ..., x_n) = \frac{(\sum_{i=1}^{n} x_i)^2}{n \cdot \sum_{i=1}^{n} x_i^2}$$
 
-Where $x_i$ is the allocation (load) for processor $i$.
-
-- **J = 1.0**: Perfect fairness (all processors equally loaded)
+- **J = 1.0**: Perfect fairness (equal load)
 - **J = 1/n**: Worst case (all load on one processor)
+
+---
 
 ## 🧪 Testing
 
-### Test Suite Overview
-
-The project includes a comprehensive test suite with **115+ tests** covering:
-
 ```bash
-# Run all tests
-python test_suite.py
+# Run all 125 tests
+python -m pytest test_suite.py -v
 
-# Expected output
-Ran 115 tests in X.XXXs
-OK
-```
-
-### Test Categories
-
-| Test Class | Tests | Coverage |
-|------------|-------|----------|
-| `TestConfig` | 6 | Configuration creation and defaults |
-| `TestProcess` | 7 | Process lifecycle and state transitions |
-| `TestProcessGenerator` | 5 | Random and custom process generation |
-| `TestProcessor` | 8 | Process execution and queue management |
-| `TestProcessorManager` | 6 | Multi-processor coordination |
-| `TestRoundRobinBalancer` | 5 | Round robin algorithm correctness |
-| `TestLeastLoadedBalancer` | 5 | Least loaded algorithm correctness |
-| `TestThresholdBasedBalancer` | 6 | Threshold algorithm and migration |
-| `TestLoadBalancerFactory` | 4 | Factory pattern and instantiation |
-| `TestQLearningBalancer` | 5 | Q-Learning algorithm correctness |
-| `TestQLearningAgent` | 6 | Q-Learning agent training and inference |
-| `TestStateEncoder` | 4 | State encoding and discretization |
-| `TestExperienceReplay` | 3 | Experience replay buffer |
-| `TestDQNBalancer` | 8 | DQN algorithm correctness |
-| `TestDQNAgent` | 8 | DQN agent training and inference |
-| `TestDQNetwork` | 5 | Neural network forward/backward pass |
-| `TestPrioritizedReplay` | 4 | Priority-based experience sampling |
-| `TestSimulationEngine` | 8 | Engine initialization and execution |
-| `TestProcessMetrics` | 4 | Individual process metrics |
-| `TestSystemMetrics` | 4 | Aggregate system metrics |
-| `TestMetricsCalculator` | 5 | Metric calculations |
-| `TestIntegration` | 6 | End-to-end workflow tests |
-| `TestEdgeCases` | 5 | Boundary conditions |
-| `TestScenarios` | 4 | Real-world simulation scenarios |
-| `TestPerformance` | 4 | Performance and stress tests |
-| `TestErrorHandling` | 4 | Error handling and validation |
-
-### Running Specific Tests
-
-```bash
-# Run single test class
-python -m pytest test_suite.py::TestLoadBalancers -v
-
-# Run single test method
-python -m pytest test_suite.py::TestSimulationEngine::test_initialization -v
+# Run specific test class
+python -m pytest test_suite.py::TestDQNBalancer -v
 
 # Run with coverage
 python -m pytest test_suite.py --cov=. --cov-report=html
 ```
 
+### Test Categories
+
+| Category | Tests | Coverage |
+|----------|:-----:|----------|
+| Configuration | 6 | Config creation, defaults |
+| Process Model | 12 | Lifecycle, state transitions |
+| Processor | 14 | Execution, queue management |
+| Load Balancers | 20 | All algorithm correctness |
+| Q-Learning | 15 | Agent training, inference |
+| DQN | 20 | Neural network, replay buffer |
+| Simulation | 12 | Engine initialization, execution |
+| Metrics | 13 | Calculations, edge cases |
+| Integration | 6 | End-to-end workflows |
+| Edge Cases | 7 | Boundary conditions |
+
+---
+
 ## 📚 API Reference
 
-### Core Classes
+### Quick Examples
 
-#### `Process` (process.py)
 ```python
-from process import Process, ProcessGenerator
-
-# Create a process
-process = Process(
-    pid=1,
-    burst_time=10,
-    arrival_time=0,
-    priority=ProcessPriority.NORMAL,
-    memory_required=256
-)
-
-# Generate random processes
-generator = ProcessGenerator(config)
-processes = generator.generate_processes(count=20)
-```
-
-#### `Processor` (processor.py)
-```python
-from processor import Processor, ProcessorManager
-
-# Create processor
-processor = Processor(processor_id=0, speed=1.0)
-processor.add_process(process)
-processor.execute_step()
-
-# Create manager for multiple processors
-manager = ProcessorManager(num_processors=4)
-manager.get_least_loaded_processor()
-```
-
-#### `LoadBalancer` (load_balancer.py)
-```python
-from load_balancer import LoadBalancerFactory, LoadBalancerType
-
-# Create balancer using factory
-balancer = LoadBalancerFactory.create(
-    LoadBalancerType.LEAST_LOADED,
-    config
-)
-
-# Assign process to best processor
-target = balancer.assign_process(process, processors)
-```
-
-#### `SimulationEngine` (simulation.py)
-```python
-from simulation import SimulationEngine
-
 # Create and run simulation
+from simulation import SimulationEngine
+from config import SimulationConfig, LoadBalancingAlgorithm
+
+config = SimulationConfig(num_processors=4, num_processes=20)
 engine = SimulationEngine(config)
-engine.initialize(algorithm=LoadBalancerType.ROUND_ROBIN)
+engine.initialize(algorithm=LoadBalancingAlgorithm.DQN)
 
-# Add processes
-for process in processes:
-    engine.add_process(process)
-
-# Run simulation
 while not engine.is_complete():
     engine.step()
 
-# Get results
-result = engine.get_results()
+result = engine.get_result()
+print(f"Avg Turnaround: {result.system_metrics.avg_turnaround_time:.2f}")
 ```
 
-#### `MetricsCalculator` (metrics.py)
 ```python
-from metrics import MetricsCalculator
+# Use scenario builder
+from integration import ScenarioBuilder, IntegratedSimulationManager
+from advanced_simulation import WorkloadPattern, ProcessType
 
-# Calculate metrics
-calculator = MetricsCalculator()
-process_metrics = calculator.calculate_process_metrics(process)
-system_metrics = calculator.calculate_system_metrics(processes, processors)
+scenario = (ScenarioBuilder("Custom Test")
+    .with_processors(8)
+    .with_processes(50)
+    .with_workload(WorkloadPattern.BURSTY)
+    .with_algorithm(LoadBalancingAlgorithm.DQN)
+    .build())
+
+manager = IntegratedSimulationManager(use_enhanced=True)
+manager.load_scenario(scenario)
+manager.initialize()
+manager.start()
 ```
 
-### Configuration
-
-#### `SimulationConfig` (config.py)
-```python
-from config import SimulationConfig
-
-config = SimulationConfig(
-    num_processors=4,
-    min_burst_time=1,
-    max_burst_time=20,
-    min_arrival_time=0,
-    max_arrival_time=50,
-    time_quantum=4,
-    migration_threshold=0.3,
-    simulation_speed=1.0
-)
-```
-
-### Validation
-
-#### `Validators` (validators.py)
-```python
-from validators import ConfigValidator, ProcessValidator
-
-# Validate configuration
-result = ConfigValidator.validate_config(config)
-if not result.is_valid:
-    print(result.errors)
-
-# Validate process
-result = ProcessValidator.validate_process(process)
-```
+---
 
 ## ⚙️ Configuration
 
 ### SimulationConfig Options
 
-| Parameter | Type | Default | Range | Description |
-|-----------|------|---------|-------|-------------|
-| `num_processors` | int | 4 | 2-16 | Number of processors |
-| `min_burst_time` | int | 1 | 1-100 | Minimum process burst time |
-| `max_burst_time` | int | 20 | 1-1000 | Maximum process burst time |
-| `min_arrival_time` | int | 0 | 0-∞ | Earliest process arrival |
-| `max_arrival_time` | int | 50 | 0-∞ | Latest process arrival |
-| `time_quantum` | int | 4 | 1-100 | Round robin time slice |
-| `migration_threshold` | float | 0.3 | 0.0-1.0 | Load diff for migration |
-| `simulation_speed` | float | 1.0 | 0.1-10.0 | GUI update speed |
+| Parameter | Default | Range | Description |
+|-----------|:-------:|-------|-------------|
+| `num_processors` | 4 | 2-16 | Number of processors |
+| `num_processes` | 20 | 1-100 | Processes to generate |
+| `time_quantum` | 4 | 1-20 | Round robin time slice |
+| `min_burst_time` | 1 | 1-100 | Minimum burst time |
+| `max_burst_time` | 20 | 1-1000 | Maximum burst time |
+| `migration_threshold` | 0.3 | 0.0-1.0 | Load diff for migration |
 
-### GUIConfig Options
+---
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `window_width` | int | 1400 | Window width in pixels |
-| `window_height` | int | 900 | Window height in pixels |
-| `update_interval` | int | 100 | GUI refresh rate (ms) |
-| `chart_update_interval` | int | 500 | Chart refresh rate (ms) |
-| `color_scheme` | dict | {...} | Color definitions |
+## 💻 Platform Notes
 
-### Environment Variables
-
+### macOS
 ```bash
-# Enable debug logging
-export LOAD_BALANCER_DEBUG=1
-
-# Set default processor count
-export LOAD_BALANCER_PROCESSORS=8
-
-# Set default algorithm
-export LOAD_BALANCER_ALGORITHM=threshold
+source venv/bin/activate
+python main.py
 ```
+
+### Windows (PowerShell)
+```powershell
+.\venv\Scripts\Activate.ps1
+python main.py
+```
+
+### Windows (Command Prompt)
+```bat
+venv\Scripts\activate.bat
+python main.py
+```
+
+---
 
 ## 🤝 Contributing
 
-### Development Setup
+1. **Fork** the repository
+2. **Create** a feature branch: `git checkout -b feature/amazing-feature`
+3. **Write** tests for your changes
+4. **Ensure** all 125 tests pass: `python -m pytest test_suite.py`
+5. **Commit** with conventional format: `feat(scope): description`
+6. **Push** to your branch: `git push origin feature/amazing-feature`
+7. **Open** a Pull Request
 
-```bash
-# Clone and setup
-git clone https://github.com/yourusername/dynamic_load_balancer.git
-cd dynamic_load_balancer
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-# Run tests before making changes
-python test_suite.py
-
-# Make your changes...
-
-# Run tests after changes
-python test_suite.py
-```
-
-### Code Standards
-
-- **Style**: Follow PEP 8 guidelines
-- **Types**: Use type hints for all functions
-- **Docs**: Include docstrings for all public classes/methods
-- **Tests**: Add tests for new functionality (maintain 91+ passing tests)
-
-### Pull Request Process
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Write tests for your changes
-4. Ensure all tests pass (`python test_suite.py`)
-5. Commit your changes with conventional commit format
-6. Push to the branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
-
-### Commit Message Format
+### Commit Format
 ```
 type(scope): Brief description
 
 Types: feat, fix, docs, refactor, test, perf
 
 Examples:
-- feat(balancer): Add weighted round robin algorithm
-- fix(gui): Resolve chart rendering on resize
-- test(metrics): Add edge case tests for fairness index
+- feat(balancer): Add weighted round robin
+- fix(gui): Resolve chart rendering issue
+- test(dqn): Add edge case tests
 ```
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Operating Systems concepts from Silberschatz, Galvin, and Gagne
-- Python documentation and community
-- Tkinter and Matplotlib libraries
 
 ---
 
+## 📄 License
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+
+---
+
+<div align="center">
+
 **Made with ❤️ for learning Operating Systems concepts**
 
-**Version:** 1.0.0 | **Tests:**  Passing | **Python:** 3.8+
+[![GitHub](https://img.shields.io/badge/GitHub-Auankj-181717?style=flat-square&logo=github)](https://github.com/Auankj/dynamic_load_balancer)
+
+**v2.0.0** • **125 Tests Passing** • **Python 3.8+** • **PyTorch 2.0+**
+
+</div>
