@@ -635,8 +635,9 @@ class LoadBalancerFactory:
     based on the algorithm type enum.
     """
     
-    # Lazy import for Q-Learning to avoid circular imports
+    # Lazy import for AI balancers to avoid circular imports
     _qlearning_balancer_class = None
+    _dqn_balancer_class = None
     
     @classmethod
     def _get_qlearning_class(cls):
@@ -645,6 +646,14 @@ class LoadBalancerFactory:
             from ai_balancer import QLearningBalancer
             cls._qlearning_balancer_class = QLearningBalancer
         return cls._qlearning_balancer_class
+    
+    @classmethod
+    def _get_dqn_class(cls):
+        """Lazy load DQN balancer to avoid circular imports."""
+        if cls._dqn_balancer_class is None:
+            from dqn_balancer import DQNBalancer
+            cls._dqn_balancer_class = DQNBalancer
+        return cls._dqn_balancer_class
     
     @staticmethod
     def create(algorithm: LoadBalancingAlgorithm, 
@@ -656,7 +665,7 @@ class LoadBalancerFactory:
         Args:
             algorithm: The algorithm type to create
             config: Optional configuration
-            num_processors: Number of processors (for Q-Learning)
+            num_processors: Number of processors (for AI algorithms)
             
         Returns:
             LoadBalancer instance
@@ -673,6 +682,9 @@ class LoadBalancerFactory:
         elif algorithm == LoadBalancingAlgorithm.Q_LEARNING:
             QLearningBalancer = LoadBalancerFactory._get_qlearning_class()
             return QLearningBalancer(config=config, num_processors=num_processors)
+        elif algorithm == LoadBalancingAlgorithm.DQN:
+            DQNBalancer = LoadBalancerFactory._get_dqn_class()
+            return DQNBalancer(config=config, num_processors=num_processors)
         else:
             raise ValueError(f"Unknown algorithm: {algorithm}")
     
@@ -692,7 +704,9 @@ class LoadBalancerFactory:
             LoadBalancingAlgorithm.THRESHOLD_BASED.value: 
                 "Dynamic migration when imbalance exceeds threshold - most sophisticated",
             LoadBalancingAlgorithm.Q_LEARNING.value:
-                "AI-powered adaptive balancing using reinforcement learning"
+                "AI-powered adaptive balancing using reinforcement learning",
+            LoadBalancingAlgorithm.DQN.value:
+                "Deep Q-Network with neural network function approximation"
         }
 
 

@@ -51,12 +51,14 @@ class LoadBalancingAlgorithm(Enum):
     - ROUND_ROBIN: Fair distribution, simple, doesn't consider actual load
     - LEAST_LOADED: Assigns to least busy processor, better load distribution
     - THRESHOLD_BASED: Only migrates when load difference exceeds threshold
-    - Q_LEARNING: AI-powered adaptive balancing using reinforcement learning
+    - Q_LEARNING: AI-powered adaptive balancing using reinforcement learning (tabular)
+    - DQN: Deep Q-Network with neural network function approximation
     """
     ROUND_ROBIN = "Round Robin"
     LEAST_LOADED = "Least Loaded First"
     THRESHOLD_BASED = "Threshold Based"
     Q_LEARNING = "AI (Q-Learning)"
+    DQN = "AI (DQN)"
 
 
 class ProcessPriority(Enum):
@@ -405,6 +407,17 @@ AI (Q-Learning) Load Balancing:
 - Training Mode: Actively learns and improves policy
 - Exploitation Mode: Uses learned policy for best performance
 - Best for: Complex, evolving workloads where patterns emerge over time
+    """.strip(),
+    
+    LoadBalancingAlgorithm.DQN: """
+AI (DQN - Deep Q-Network) Load Balancing:
+- Uses deep neural networks for function approximation
+- Handles continuous state spaces without discretization
+- Features: Double DQN, Dueling Architecture, Prioritized Experience Replay
+- Better generalization to unseen states than Q-Learning
+- Training Mode: Learns through neural network optimization
+- Evaluation Mode: Uses trained network for optimal decisions
+- Best for: Large-scale systems with many processors and complex patterns
     """.strip()
 }
 

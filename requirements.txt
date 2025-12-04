@@ -7,8 +7,15 @@
 # Data Visualization
 matplotlib>=3.5.0
 
-# AI/ML Support
+# AI/ML Support - Core
 numpy>=1.21.0
+
+# Deep Learning (for DQN)
+# Note: Install torch separately based on your platform:
+#   CPU only: pip install torch
+#   CUDA: pip install torch --index-url https://download.pytorch.org/whl/cu118
+#   MPS (Mac): pip install torch (auto-detected)
+torch>=2.0.0
 
 # No additional dependencies required - using standard library:
 # - threading (built-in)

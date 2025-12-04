@@ -1349,8 +1349,9 @@ class LoadBalancerGUI:
     def _on_algorithm_changed(self, event=None):
         """Handle algorithm selection change - show/hide AI controls."""
         algo_name = self.algorithm_var.get()
-        if algo_name == LoadBalancingAlgorithm.Q_LEARNING.value:
-            # Show AI controls
+        if algo_name in (LoadBalancingAlgorithm.Q_LEARNING.value, 
+                         LoadBalancingAlgorithm.DQN.value):
+            # Show AI controls for both Q-Learning and DQN
             self.ai_frame.pack(side=tk.LEFT, padx=(0, 30))
         else:
             # Hide AI controls
@@ -1383,8 +1384,8 @@ class LoadBalancerGUI:
             messagebox.showerror("Error", "Failed to initialize simulation")
             return
         
-        # Configure AI mode if Q-Learning is selected
-        if algorithm == LoadBalancingAlgorithm.Q_LEARNING:
+        # Configure AI mode if Q-Learning or DQN is selected
+        if algorithm in (LoadBalancingAlgorithm.Q_LEARNING, LoadBalancingAlgorithm.DQN):
             training_mode = self.ai_training_var.get()
             if hasattr(self.engine.load_balancer, 'set_training_mode'):
                 self.engine.load_balancer.set_training_mode(training_mode)
@@ -1565,7 +1566,7 @@ class LoadBalancerGUI:
         
         stats = self.engine.load_balancer.get_statistics()
         
-        # Update status label with AI info when running Q-Learning
+        # Update status label with AI info when running Q-Learning or DQN
         algo_name = self.algorithm_var.get()
         if algo_name == LoadBalancingAlgorithm.Q_LEARNING.value:
             mode = "Training" if stats.get('training_mode', True) else "Exploiting"
@@ -1573,6 +1574,15 @@ class LoadBalancerGUI:
             q_states = stats.get('q_table_size', 0)
             self.status_label.config(
                 text=f"🤖 {mode} (ε={epsilon:.1f}%, Q-states={q_states})",
+                fg=ModernColors.PRIMARY if stats.get('training_mode') else ModernColors.SUCCESS
+            )
+        elif algo_name == LoadBalancingAlgorithm.DQN.value:
+            mode = "Training" if stats.get('training_mode', True) else "Evaluating"
+            epsilon = stats.get('epsilon', 0) * 100
+            steps = stats.get('total_steps', 0)
+            avg_loss = stats.get('avg_loss', 0)
+            self.status_label.config(
+                text=f"🧠 {mode} (ε={epsilon:.1f}%, steps={steps}, loss={avg_loss:.4f})",
                 fg=ModernColors.PRIMARY if stats.get('training_mode') else ModernColors.SUCCESS
             )
     
@@ -1592,15 +1602,19 @@ class LoadBalancerGUI:
         # Final process table update
         self._update_process_table()
         
-        # Save AI model if using Q-Learning
+        # Save AI model if using Q-Learning or DQN
         algo_name = self.algorithm_var.get()
-        if algo_name == LoadBalancingAlgorithm.Q_LEARNING.value:
+        if algo_name in (LoadBalancingAlgorithm.Q_LEARNING.value, 
+                         LoadBalancingAlgorithm.DQN.value):
             if self.engine and hasattr(self.engine.load_balancer, 'save_model'):
                 self.engine.load_balancer.save_model()
                 ai_stats = ""
                 if hasattr(self.engine.load_balancer, 'get_statistics'):
                     stats = self.engine.load_balancer.get_statistics()
-                    ai_stats = f"\n\n🤖 AI Stats:\nEpisodes: {stats.get('episode_count', 0)}\nQ-States: {stats.get('q_table_size', 0)}\nExploration: {stats.get('epsilon', 0)*100:.1f}%"
+                    if algo_name == LoadBalancingAlgorithm.Q_LEARNING.value:
+                        ai_stats = f"\n\n🤖 AI Stats:\nEpisodes: {stats.get('episode_count', 0)}\nQ-States: {stats.get('q_table_size', 0)}\nExploration: {stats.get('epsilon', 0)*100:.1f}%"
+                    else:
+                        ai_stats = f"\n\n🧠 DQN Stats:\nEpisodes: {stats.get('episode_count', 0)}\nSteps: {stats.get('total_steps', 0)}\nAvg Loss: {stats.get('avg_loss', 0):.4f}\nExploration: {stats.get('epsilon', 0)*100:.1f}%"
                 messagebox.showinfo("Simulation Complete", 
                                f"Simulation completed in {result.total_time} time units.\n"
                                f"Completed: {metrics.completed_processes}/{metrics.total_processes} processes\n"

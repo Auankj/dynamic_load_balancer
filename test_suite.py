@@ -1456,6 +1456,291 @@ class TestExperienceReplay(unittest.TestCase):
 
 
 # =============================================================================
+# DQN TESTS
+# =============================================================================
+
+class TestDQNBalancer(unittest.TestCase):
+    """Test Deep Q-Network load balancer."""
+    
+    @classmethod
+    def setUpClass(cls):
+        """Check if PyTorch is available."""
+        try:
+            from dqn_balancer import TORCH_AVAILABLE, DQNBalancer
+            cls.torch_available = TORCH_AVAILABLE
+        except ImportError:
+            cls.torch_available = False
+    
+    def setUp(self):
+        """Set up test fixtures."""
+        if not self.torch_available:
+            self.skipTest("PyTorch not available")
+        
+        from dqn_balancer import DQNBalancer, DQNConfig
+        self.config = SimulationConfig(num_processors=4, num_processes=10)
+        self.dqn_config = DQNConfig(
+            min_replay_size=10,  # Lower for testing
+            batch_size=4,
+            epsilon_decay_steps=100
+        )
+        self.balancer = DQNBalancer(
+            config=self.config, 
+            dqn_config=self.dqn_config,
+            num_processors=4
+        )
+        self.manager = ProcessorManager(num_processors=4)
+        self.processors = list(self.manager)
+        
+    def test_initialization(self):
+        """Test DQN balancer initialization."""
+        from config import LoadBalancingAlgorithm
+        self.assertEqual(self.balancer.algorithm_type, LoadBalancingAlgorithm.DQN)
+        self.assertEqual(self.balancer.name, "AI (DQN)")
+        self.assertEqual(self.balancer.num_processors, 4)
+        
+    def test_assign_process(self):
+        """Test process assignment."""
+        process = Process(pid=1, burst_time=5)
+        selected = self.balancer.assign_process(process, self.processors)
+        
+        self.assertIsNotNone(selected)
+        self.assertIn(selected, self.processors)
+        self.assertEqual(self.balancer.assignment_count, 1)
+        
+    def test_multiple_assignments(self):
+        """Test multiple process assignments."""
+        for i in range(10):
+            process = Process(pid=i, burst_time=random.randint(2, 10))
+            selected = self.balancer.assign_process(process, self.processors)
+            self.assertIsNotNone(selected)
+            
+        self.assertEqual(self.balancer.assignment_count, 10)
+        
+    def test_training_mode(self):
+        """Test training/evaluation mode switching."""
+        self.balancer.set_training_mode(True)
+        self.assertTrue(self.balancer.agent.training_mode)
+        
+        self.balancer.set_training_mode(False)
+        self.assertFalse(self.balancer.agent.training_mode)
+        
+    def test_get_statistics(self):
+        """Test statistics retrieval."""
+        stats = self.balancer.get_statistics()
+        
+        self.assertIn('epsilon', stats)
+        self.assertIn('total_steps', stats)
+        self.assertIn('training_mode', stats)
+        self.assertIn('decisions_made', stats)
+        
+    def test_process_completed_callback(self):
+        """Test reward feedback mechanism."""
+        process = Process(pid=1, burst_time=5, arrival_time=0)
+        self.balancer.assign_process(process, self.processors)
+        
+        # Simulate process completion
+        process.start_time = 1
+        process.completion_time = 6
+        process.state = ProcessState.COMPLETED
+        
+        # Should not raise
+        self.balancer.process_completed(process, self.processors)
+
+
+class TestDQNAgent(unittest.TestCase):
+    """Test DQN agent components."""
+    
+    @classmethod
+    def setUpClass(cls):
+        """Check if PyTorch is available."""
+        try:
+            from dqn_balancer import TORCH_AVAILABLE, DQNAgent
+            cls.torch_available = TORCH_AVAILABLE
+        except ImportError:
+            cls.torch_available = False
+    
+    def setUp(self):
+        """Set up test fixtures."""
+        if not self.torch_available:
+            self.skipTest("PyTorch not available")
+            
+        from dqn_balancer import DQNAgent, DQNConfig
+        self.config = DQNConfig(
+            min_replay_size=10,
+            batch_size=4,
+            epsilon_decay_steps=100
+        )
+        self.agent = DQNAgent(state_size=17, action_size=4, config=self.config)
+        
+    def test_initialization(self):
+        """Test agent initialization."""
+        self.assertEqual(self.agent.state_size, 17)
+        self.assertEqual(self.agent.action_size, 4)
+        self.assertEqual(self.agent.epsilon, self.config.epsilon_start)
+        
+    def test_action_selection(self):
+        """Test action selection."""
+        import numpy as np
+        state = np.random.randn(17).astype(np.float32)
+        action = self.agent.select_action(state)
+        
+        self.assertIsInstance(action, int)
+        self.assertGreaterEqual(action, 0)
+        self.assertLess(action, 4)
+        
+    def test_step(self):
+        """Test learning step."""
+        import numpy as np
+        state = np.random.randn(17).astype(np.float32)
+        next_state = np.random.randn(17).astype(np.float32)
+        
+        self.agent.select_action(state)
+        self.agent.step(reward=-1.0, next_state=next_state, done=False)
+        
+        self.assertEqual(len(self.agent.replay_buffer), 1)
+        
+    def test_epsilon_decay(self):
+        """Test epsilon decays during training."""
+        import numpy as np
+        initial_epsilon = self.agent.epsilon
+        
+        # Multiple actions to trigger decay
+        for _ in range(10):
+            state = np.random.randn(17).astype(np.float32)
+            self.agent.select_action(state)
+            
+        self.assertLess(self.agent.epsilon, initial_epsilon)
+        
+    def test_evaluation_mode(self):
+        """Test evaluation mode uses minimal exploration."""
+        self.agent.set_training_mode(False)
+        self.assertEqual(self.agent.epsilon, self.config.epsilon_end)
+        self.assertFalse(self.agent.training_mode)
+
+
+class TestDQNetwork(unittest.TestCase):
+    """Test DQN neural network architecture."""
+    
+    @classmethod
+    def setUpClass(cls):
+        """Check if PyTorch is available."""
+        try:
+            from dqn_balancer import TORCH_AVAILABLE
+            cls.torch_available = TORCH_AVAILABLE
+        except ImportError:
+            cls.torch_available = False
+    
+    def setUp(self):
+        """Set up test fixtures."""
+        if not self.torch_available:
+            self.skipTest("PyTorch not available")
+            
+    def test_network_forward(self):
+        """Test network forward pass."""
+        import torch
+        from dqn_balancer import DQNetwork, DQNConfig
+        
+        config = DQNConfig()
+        network = DQNetwork(state_size=17, action_size=4, config=config)
+        
+        state = torch.randn(1, 17)
+        output = network(state)
+        
+        self.assertEqual(output.shape, (1, 4))
+        
+    def test_dueling_architecture(self):
+        """Test dueling network architecture."""
+        import torch
+        from dqn_balancer import DQNetwork, DQNConfig
+        
+        config = DQNConfig(use_dueling=True)
+        network = DQNetwork(state_size=17, action_size=4, config=config)
+        
+        self.assertTrue(hasattr(network, 'value_output'))
+        self.assertTrue(hasattr(network, 'advantage_output'))
+        
+        state = torch.randn(1, 17)
+        output = network(state)
+        self.assertEqual(output.shape, (1, 4))
+        
+    def test_batch_forward(self):
+        """Test batch processing."""
+        import torch
+        from dqn_balancer import DQNetwork, DQNConfig
+        
+        config = DQNConfig()
+        network = DQNetwork(state_size=17, action_size=4, config=config)
+        
+        batch = torch.randn(32, 17)
+        output = network(batch)
+        
+        self.assertEqual(output.shape, (32, 4))
+
+
+class TestPrioritizedReplay(unittest.TestCase):
+    """Test prioritized experience replay."""
+    
+    @classmethod
+    def setUpClass(cls):
+        """Check if PyTorch is available."""
+        try:
+            from dqn_balancer import TORCH_AVAILABLE
+            cls.torch_available = TORCH_AVAILABLE
+        except ImportError:
+            cls.torch_available = False
+    
+    def setUp(self):
+        """Set up test fixtures."""
+        if not self.torch_available:
+            self.skipTest("PyTorch not available")
+            
+        from dqn_balancer import PrioritizedReplayBuffer, DQNConfig, Transition
+        import numpy as np
+        
+        self.config = DQNConfig()
+        self.buffer = PrioritizedReplayBuffer(capacity=100, config=self.config)
+        
+    def test_add_transition(self):
+        """Test adding transitions."""
+        import numpy as np
+        from dqn_balancer import Transition
+        
+        transition = Transition(
+            state=np.zeros(17, dtype=np.float32),
+            action=0,
+            reward=1.0,
+            next_state=np.zeros(17, dtype=np.float32),
+            done=False
+        )
+        
+        self.buffer.add(transition)
+        self.assertEqual(len(self.buffer), 1)
+        
+    def test_sample_with_weights(self):
+        """Test sampling returns importance weights."""
+        import numpy as np
+        from dqn_balancer import Transition
+        
+        # Add multiple transitions
+        for i in range(20):
+            transition = Transition(
+                state=np.random.randn(17).astype(np.float32),
+                action=i % 4,
+                reward=float(i),
+                next_state=np.random.randn(17).astype(np.float32),
+                done=False
+            )
+            self.buffer.add(transition)
+            
+        transitions, indices, weights = self.buffer.sample(8)
+        
+        self.assertEqual(len(transitions), 8)
+        self.assertIsNotNone(indices)
+        self.assertIsNotNone(weights)
+        self.assertEqual(len(weights), 8)
+
+
+# =============================================================================
 # TEST RUNNER
 # =============================================================================
 
@@ -1479,6 +1764,10 @@ def run_all_tests(verbosity=2):
         TestQLearningAgent,
         TestStateEncoder,
         TestExperienceReplay,
+        TestDQNBalancer,
+        TestDQNAgent,
+        TestDQNetwork,
+        TestPrioritizedReplay,
         TestSimulationEngine,
         TestSimulationResult,
         TestProcessMetrics,

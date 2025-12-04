@@ -1,7 +1,8 @@
 # Dynamic Load Balancing in Multiprocessor Systems
 
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/Tests-91%20Passing-success.svg)](test_suite.py)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c.svg)](https://pytorch.org/)
+[![Tests](https://img.shields.io/badge/Tests-115%20Passing-success.svg)](test_suite.py)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Coverage](https://img.shields.io/badge/Coverage-Comprehensive-brightgreen.svg)](test_suite.py)
 
@@ -40,7 +41,8 @@ This simulator allows you to visualize and compare different load balancing stra
 - **Multi-Processor Simulation** - Configure 2-16 virtual processors with customizable speed
 - **Process Generation** - Create processes with random or custom attributes (burst time, priority, memory)
 - **Discrete Event Simulation** - Accurate time-stepped simulation with configurable speed
-- **Multiple Algorithms** - Compare Round Robin, Least Loaded, and Threshold-Based strategies
+- **Multiple Algorithms** - Compare Round Robin, Least Loaded, Threshold-Based, Q-Learning, and DQN strategies
+- **AI-Powered Balancing** - Q-Learning (discrete states) and Deep Q-Network (continuous states) with PyTorch
 - **Process Migration** - Dynamic process movement between processors for optimal balance
 
 ### Rich Visualization
@@ -174,6 +176,9 @@ venv\Scripts\activate.bat
 | Package | Version | Purpose |
 |---------|---------|---------|
 | matplotlib | ≥3.5.0 | Chart rendering |
+| numpy | ≥1.21.0 | Numerical operations |
+| torch | ≥2.0.0 | Deep Q-Network (DQN) neural networks |
+| torchvision | ≥0.15.0 | PyTorch utilities |
 | tkinter | (built-in) | GUI framework |
 
 ## 📖 Usage
@@ -365,17 +370,130 @@ The AI balancer supports two operational modes, selectable via the GUI:
 - Trained models are automatically loaded on startup
 - Use Exploit mode to leverage previously trained models
 
+---
+
+### 5. Deep Q-Network (`dqn`)
+**How it works:** Uses deep neural networks to approximate the Q-function, enabling learning in continuous state spaces without discretization.
+
+```python
+# Simplified architecture
+class DQNetwork(nn.Module):
+    def __init__(self, state_dim, action_dim):
+        self.fc1 = nn.Linear(state_dim, 128)
+        self.fc2 = nn.Linear(128, 256)
+        self.fc3 = nn.Linear(256, 128)
+        self.out = nn.Linear(128, action_dim)
+    
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+        return self.out(x)
+
+# Decision making
+def assign(self, process, processors):
+    state = encode_continuous_state(processors, process)
+    with torch.no_grad():
+        q_values = network(state)
+        action = q_values.argmax().item()
+    return processors[action]
+```
+
+| Pros | Cons |
+|------|------|
+| Handles continuous states | Requires PyTorch (larger dependency) |
+| Better generalization | More computationally intensive |
+| Scales to complex scenarios | Needs GPU for large-scale training |
+| State-of-the-art RL approach | Hyperparameter sensitive |
+
+**Best for:** Complex workloads with continuous state variables and large state spaces
+
+**Key Components:**
+- **Neural Network:** 3-layer MLP (128→256→128 hidden units)
+- **Experience Replay:** Stores past experiences for stable training
+- **Target Network:** Separate network for stable Q-value targets
+- **Double DQN:** Uses online network to select actions, target network to evaluate
+- **Prioritized Replay:** Samples important experiences more frequently
+
+**Time Complexity:** O(1) assignment (neural network forward pass)
+
+#### DQN Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        DQN Agent                                 │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌─────────────────┐    ┌─────────────────┐                     │
+│  │  Online Network │    │  Target Network │ (soft update τ)     │
+│  │  (training)     │───▶│  (stable Q)     │                     │
+│  └────────┬────────┘    └─────────────────┘                     │
+│           │                                                      │
+│  ┌────────▼────────────────────────────────────────────┐        │
+│  │              Prioritized Experience Replay           │        │
+│  │   ┌─────────────────────────────────────────────┐   │        │
+│  │   │ (state, action, reward, next_state, done)   │   │        │
+│  │   │ Priority-based sampling with IS weights     │   │        │
+│  │   └─────────────────────────────────────────────┘   │        │
+│  └─────────────────────────────────────────────────────┘        │
+└─────────────────────────────────────────────────────────────────┘
+
+State Encoding (Continuous):
+┌──────────────────────────────────────────────────────────────────┐
+│ [proc_0_load, proc_0_queue, proc_1_load, proc_1_queue, ...]      │
+│ [..., proc_N_load, proc_N_queue, burst_norm, priority_norm]      │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+#### DQN vs Q-Learning Comparison
+
+| Aspect | Q-Learning | DQN |
+|--------|------------|-----|
+| **State Space** | Discrete (binned) | Continuous (raw values) |
+| **Q-Function** | Lookup table | Neural network |
+| **Memory** | O(states × actions) | Fixed network parameters |
+| **Generalization** | Only seen states | Interpolates unseen states |
+| **Training Stability** | Stable | Requires target network |
+| **Dependencies** | NumPy only | PyTorch required |
+| **Best For** | Simple, finite states | Complex, continuous states |
+
+#### DQN Train vs Exploit Mode
+
+| Aspect | 🎓 Train Mode | 🎯 Exploit Mode |
+|--------|---------------|-----------------|
+| **Purpose** | Learn optimal neural network weights | Use trained network |
+| **Exploration (ε)** | Starts at 100%, decays to 5% | Fixed at 1% |
+| **Network Updates** | Active backpropagation | No weight updates |
+| **Target Network** | Soft updates every step | Frozen |
+| **Experience Replay** | Active collection and sampling | Minimal collection |
+| **Performance** | Improves over episodes | Stable, optimized |
+| **Recommended Training** | 1000-5000+ process assignments | After training |
+
+**DQN Training Tips:**
+1. **Patience** - DQN needs more samples than Q-Learning initially
+2. **Batch Size** - Default 64 works well, increase for more stability
+3. **Learning Rate** - 0.001 default, reduce if training is unstable
+4. **Target Update (τ)** - 0.005 for soft updates, balances stability/speed
+5. **Replay Buffer** - 100,000 capacity, larger is better for diverse experience
+
+**Model Persistence:**
+- Models auto-save to `output/dqn_model.pt` when simulation completes
+- Includes network weights, optimizer state, and configuration
+- Trained models are automatically loaded on startup
+- Use Exploit mode to leverage previously trained models
+
 ### Algorithm Comparison
 
-| Metric | Round Robin | Least Loaded | Threshold | Q-Learning |
-|--------|-------------|--------------|-----------|------------|
-| **Assignment Speed** | ⭐⭐⭐ Fastest | ⭐⭐ Medium | ⭐⭐ Medium | ⭐⭐⭐ Fast* |
-| **Load Balance** | ⭐ Poor | ⭐⭐⭐ Good | ⭐⭐⭐ Best | ⭐⭐⭐ Adaptive |
-| **Adaptability** | ⭐ None | ⭐⭐ Reactive | ⭐⭐⭐ Proactive | ⭐⭐⭐ Learning |
-| **Overhead** | ⭐⭐⭐ Minimal | ⭐⭐ Low | ⭐ Higher | ⭐⭐ Medium |
-| **Best Scenario** | Uniform tasks | Mixed tasks | Dynamic loads | Pattern-rich |
+| Metric | Round Robin | Least Loaded | Threshold | Q-Learning | DQN |
+|--------|-------------|--------------|-----------|------------|-----|
+| **Assignment Speed** | ⭐⭐⭐ Fastest | ⭐⭐ Medium | ⭐⭐ Medium | ⭐⭐⭐ Fast | ⭐⭐ Medium |
+| **Load Balance** | ⭐ Poor | ⭐⭐⭐ Good | ⭐⭐⭐ Best | ⭐⭐⭐ Adaptive | ⭐⭐⭐ Best* |
+| **Adaptability** | ⭐ None | ⭐⭐ Reactive | ⭐⭐⭐ Proactive | ⭐⭐⭐ Learning | ⭐⭐⭐ Deep Learning |
+| **Overhead** | ⭐⭐⭐ Minimal | ⭐⭐ Low | ⭐ Higher | ⭐⭐ Medium | ⭐ Higher** |
+| **Generalization** | ⭐ None | ⭐ None | ⭐⭐ Some | ⭐⭐ Limited | ⭐⭐⭐ Excellent |
+| **Best Scenario** | Uniform tasks | Mixed tasks | Dynamic loads | Pattern-rich | Complex/Continuous |
 
-*After training; initial training phase has higher overhead.
+*After sufficient training with diverse workloads
+**Requires PyTorch and more memory; benefits from GPU acceleration
 
 ## 📁 Project Structure
 
@@ -387,8 +505,9 @@ dynamic_load_balancer/
 ├── processor.py         # Processor class and ProcessorManager
 ├── load_balancer.py     # Load balancing algorithms (Strategy pattern)
 ├── ai_balancer.py       # AI Q-Learning load balancer with RL agent
+├── dqn_balancer.py      # Deep Q-Network load balancer with PyTorch
 ├── simulation.py        # SimulationEngine and SimulationResult
-├── metrics.py           # ProcessMetrics, ProcessorMetrics, 
+├── metrics.py           # ProcessMetrics, ProcessorMetrics,
 ├── gui.py               # Full Tkinter GUI with Matplotlib integration
 ├── utils.py             # SimulationLogger, DataExporter utilities
 ├── validators.py        # Input validation and error handling
@@ -405,12 +524,14 @@ dynamic_load_balancer/
 | `process.py` | ~750 | 2 | Process dataclass with lifecycle, ProcessGenerator for creating workloads |
 | `processor.py` | ~975 | 2 | Processor execution logic, ProcessorManager for multi-processor coordination |
 | `load_balancer.py` | ~810 | 5 | LoadBalancer ABC, RoundRobin, LeastLoaded, ThresholdBased, Factory |
+| `ai_balancer.py` | ~1245 | 6 | QLearningAgent, StateEncoder, ExperienceReplay, QLearningBalancer |
+| `dqn_balancer.py` | ~1700 | 7 | DQNAgent, DQNetwork, DuelingDQN, PrioritizedReplay, DQNBalancer |
 | `simulation.py` | ~760 | 3 | SimulationEngine, SimulationState enum, SimulationResult |
 | `metrics.py` | ~870 | 4 | ProcessMetrics, ProcessorMetrics, SystemMetrics, MetricsCalculator |
 | `gui.py` | ~1430 | 5 | LoadBalancerGUI, LoadBar, ProcessorWidget, MetricCard, ChartFrame |
 | `utils.py` | ~700 | 2 | SimulationLogger (singleton), DataExporter (JSON/CSV) |
 | `validators.py` | ~500 | 6 | ValidationError, ValidationResult, Config/Process/SimulationValidators |
-| `test_suite.py` | ~800 | 18 | Comprehensive unit and integration tests |
+| `test_suite.py` | ~1800 | 22 | Comprehensive unit and integration tests |
 
 ## 📊 Performance Metrics
 
@@ -462,14 +583,14 @@ Where $x_i$ is the allocation (load) for processor $i$.
 
 ### Test Suite Overview
 
-The project includes a comprehensive test suite with **91 tests** covering:
+The project includes a comprehensive test suite with **115+ tests** covering:
 
 ```bash
 # Run all tests
 python test_suite.py
 
 # Expected output
-Ran 91 tests in X.XXXs
+Ran 115 tests in X.XXXs
 OK
 ```
 
@@ -486,6 +607,14 @@ OK
 | `TestLeastLoadedBalancer` | 5 | Least loaded algorithm correctness |
 | `TestThresholdBasedBalancer` | 6 | Threshold algorithm and migration |
 | `TestLoadBalancerFactory` | 4 | Factory pattern and instantiation |
+| `TestQLearningBalancer` | 5 | Q-Learning algorithm correctness |
+| `TestQLearningAgent` | 6 | Q-Learning agent training and inference |
+| `TestStateEncoder` | 4 | State encoding and discretization |
+| `TestExperienceReplay` | 3 | Experience replay buffer |
+| `TestDQNBalancer` | 8 | DQN algorithm correctness |
+| `TestDQNAgent` | 8 | DQN agent training and inference |
+| `TestDQNetwork` | 5 | Neural network forward/backward pass |
+| `TestPrioritizedReplay` | 4 | Priority-based experience sampling |
 | `TestSimulationEngine` | 8 | Engine initialization and execution |
 | `TestProcessMetrics` | 4 | Individual process metrics |
 | `TestSystemMetrics` | 4 | Aggregate system metrics |
