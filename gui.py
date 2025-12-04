@@ -2635,6 +2635,93 @@ load balancing algorithms in multiprocessor systems."""
   🎯 Best for: Dynamic workloads where load changes over time
 
 
+┌──────────────────────────────────────────────────────────────────┐
+│  4. AI Q-LEARNING                                                │
+└──────────────────────────────────────────────────────────────────┘
+
+  Distribution: Uses reinforcement learning to learn optimal
+                process assignments through trial and error.
+
+  🧠 How it works:
+     • Discretizes system state (loads, queues, process info)
+     • Maintains Q-table mapping states to action values
+     • Learns from rewards based on turnaround time & fairness
+
+  ✅ Advantages:
+     • Learns optimal strategies over time
+     • Adapts to workload patterns
+     • Can outperform static algorithms after training
+     • No manual tuning of assignment rules
+
+  ❌ Disadvantages:
+     • Requires training period
+     • Initial random behavior during exploration
+     • Memory usage grows with state space
+     • May not generalize to unseen states
+
+  🎯 Best for: Repeated workloads with learnable patterns
+
+  📋 Modes:
+     • Train: Explores different strategies (ε starts at 100%)
+     • Exploit: Uses learned policy (ε fixed at 1%)
+
+
+┌──────────────────────────────────────────────────────────────────┐
+│  5. AI DEEP Q-NETWORK (DQN)                                      │
+└──────────────────────────────────────────────────────────────────┘
+
+  Distribution: Uses deep neural networks to approximate Q-values
+                for continuous state spaces.
+
+  🧠 How it works:
+     • Continuous state encoding (no discretization)
+     • 3-layer neural network (128→256→128 hidden units)
+     • Experience replay for stable training
+     • Target network for Q-value stability
+
+  ✅ Advantages:
+     • Handles continuous state spaces
+     • Better generalization to unseen states
+     • Scales to complex scenarios
+     • State-of-the-art RL approach
+
+  ❌ Disadvantages:
+     • Requires PyTorch (larger dependency)
+     • More computationally intensive
+     • Needs more training samples
+     • Hyperparameter sensitive
+
+  🎯 Best for: Complex workloads with continuous variables
+
+  📋 Modes:
+     • Train: Active learning with backpropagation
+     • Exploit: Frozen network, optimal decisions
+
+  🔧 Architecture:
+     • Double DQN for reduced overestimation
+     • Prioritized Experience Replay
+     • Soft target network updates
+     • Optional Dueling architecture
+
+
+╔══════════════════════════════════════════════════════════════════╗
+║                    ALGORITHM COMPARISON                           ║
+╚══════════════════════════════════════════════════════════════════╝
+
+  ┌────────────────┬───────┬───────┬───────┬───────┬───────┐
+  │ Metric         │  RR   │  LL   │  TB   │  QL   │  DQN  │
+  ├────────────────┼───────┼───────┼───────┼───────┼───────┤
+  │ Speed          │ ⭐⭐⭐ │ ⭐⭐  │ ⭐⭐  │ ⭐⭐⭐ │ ⭐⭐  │
+  │ Load Balance   │ ⭐    │ ⭐⭐⭐ │ ⭐⭐⭐ │ ⭐⭐⭐ │ ⭐⭐⭐ │
+  │ Adaptability   │ ⭐    │ ⭐⭐  │ ⭐⭐⭐ │ ⭐⭐⭐ │ ⭐⭐⭐ │
+  │ Generalization │ ⭐    │ ⭐    │ ⭐⭐  │ ⭐⭐  │ ⭐⭐⭐ │
+  │ Overhead       │ ⭐⭐⭐ │ ⭐⭐  │ ⭐    │ ⭐⭐  │ ⭐    │
+  └────────────────┴───────┴───────┴───────┴───────┴───────┘
+
+  RR = Round Robin, LL = Least Loaded, TB = Threshold-Based
+  QL = Q-Learning, DQN = Deep Q-Network
+
+
 ╔══════════════════════════════════════════════════════════════════╗
 ║                      METRICS EXPLAINED                            ║
 ╚══════════════════════════════════════════════════════════════════╝
@@ -2653,6 +2740,15 @@ load balancing algorithms in multiprocessor systems."""
 
   🎯 Jain's Fairness Index:
      Statistical fairness measure (1.0 = perfectly fair)
+
+  🔢 Epsilon (ε) - AI Algorithms:
+     Exploration rate (higher = more random exploration)
+
+  📦 Q-States - Q-Learning:
+     Number of unique states learned in Q-table
+
+  🧠 Replay Buffer - DQN:
+     Experience memory for neural network training
         """
         
         text.insert(tk.END, info_text)

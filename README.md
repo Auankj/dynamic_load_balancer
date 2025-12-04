@@ -853,4 +853,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Made with ❤️ for learning Operating Systems concepts**
 
-**Version:** 1.0.0 | **Tests:** 91 Passing | **Python:** 3.8+
+**Version:** 1.0.0 | **Tests:**  Passing | **Python:** 3.8+
