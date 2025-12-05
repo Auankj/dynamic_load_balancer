@@ -118,8 +118,8 @@ The GUI features:
 │                       Simulation Layer                             │
 │           (simulation.py / enhanced_simulation.py)                 │
 │   ┌────────────────────────────────────────────────────────────┐   │
-│   │                    SimulationEngine                         │  │
-│   │    Time Management • Event Processing • State Control       │  │
+│   │                    SimulationEngine                        │   │
+│   │    Time Management • Event Processing • State Control      │   │
 │   └────────────────────────────────────────────────────────────┘   │
 └──────┬──────────────────┬───────────────────┬──────────────────────┘
        │                  │                   │
