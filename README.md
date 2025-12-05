@@ -107,19 +107,19 @@ The GUI features:
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
-│                           GUI Layer                                 │
-│                          (gui.py)                                   │
+│                           GUI Layer                                │
+│                          (gui.py)                                  │
 │   ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌────────────────┐  │
 │   │ Load Bars  │ │  Metrics   │ │   Charts   │ │   Controls     │  │
 │   └────────────┘ └────────────┘ └────────────┘ └────────────────┘  │
 └────────────────────────────────┬───────────────────────────────────┘
                                  │
 ┌────────────────────────────────▼───────────────────────────────────┐
-│                       Simulation Layer                              │
-│           (simulation.py / enhanced_simulation.py)                  │
+│                       Simulation Layer                             │
+│           (simulation.py / enhanced_simulation.py)                 │
 │   ┌────────────────────────────────────────────────────────────┐   │
-│   │                    SimulationEngine                         │   │
-│   │    Time Management • Event Processing • State Control       │   │
+│   │                    SimulationEngine                         │  │
+│   │    Time Management • Event Processing • State Control       │  │
 │   └────────────────────────────────────────────────────────────┘   │
 └──────┬──────────────────┬───────────────────┬──────────────────────┘
        │                  │                   │
