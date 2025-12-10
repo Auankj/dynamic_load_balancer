@@ -91,10 +91,17 @@ The GUI features:
 | **SLA Tracking** | Service Level Agreement metrics and violations |
 
 ### 🎨 Rich Visualization
-- **Real-Time Load Bars** — Color-coded processor visualization (green→yellow→red)
-- **Gantt Chart** — Interactive process execution timeline with tooltips
-- **Performance Dashboard** — Live metrics with trend indicators
-- **Algorithm Comparison** — Side-by-side analysis with charts
+
+| Chart Type | Description |
+|------------|-------------|
+| 📊 **Load Bars** | Real-time processor load with traffic-light colors (🟢→🟡→🔴) |
+| 📈 **Gantt Chart** | Interactive timeline showing process execution across processors |
+| 📉 **Performance Graphs** | Live metrics with trend lines and historical data |
+| 🔄 **Queue Visualization** | Ready queue depth per processor |
+| ⚖️ **Algorithm Comparison** | Side-by-side performance analysis with bar/line charts |
+| 🎯 **Fairness Index** | Jain's fairness visualization across processors |
+| ⏱️ **Response Time Distribution** | Histogram of process response times |
+| 🔥 **Heatmap** | Processor utilization over time |
 
 ### 📈 Comprehensive Analytics
 - **Process Metrics** — Turnaround time, waiting time, response time
