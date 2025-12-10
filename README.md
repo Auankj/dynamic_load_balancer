@@ -90,18 +90,55 @@ The GUI features:
 | **Scenario System** | Predefined and custom simulation scenarios |
 | **SLA Tracking** | Service Level Agreement metrics and violations |
 
-### 🎨 Rich Visualization
+### 🎨 Rich Visualization & Charts
+
+#### 📊 Processor Load Monitor
+Real-time visualization of processor loads with intelligent color-coding:
+```
+   0%                    50%                   100%
+   ├───────────────────────┼───────────────────────┤
+   🟢 Green (0-40%)        🟡 Yellow (40-70%)       🔴 Red (70-100%)
+```
+- **Load Bars**: Animated horizontal bars showing current CPU utilization
+- **Color Gradient**: Smooth transitions between load states
+- **Queue Indicators**: Number badges showing pending processes per CPU
+
+#### 📈 Gantt Chart Timeline
+Interactive process execution timeline with rich details:
+- **Process Blocks**: Color-coded by process priority/type
+- **Time Scale**: Auto-adjusting based on simulation duration
+- **Hover Details**: Process ID, burst time, start/end times
+- **Migration Lines**: Dashed connectors showing process migrations
+- **Zoom & Pan**: Mouse wheel zoom, drag to navigate
+
+#### 📉 Real-Time Performance Graphs
+Live updating charts with multiple metrics:
+
+| Metric Type | Visualization | Update Frequency |
+|-------------|---------------|------------------|
+| CPU Utilization | Line chart with fill | Every simulation tick |
+| Throughput | Stacked area chart | Per completed process |
+| Wait Times | Box plot with outliers | Per process completion |
+| Queue Depths | Multi-line overlay | Every scheduling decision |
+| Load Variance | Gradient heat strip | Continuous |
+
+#### ⚖️ Algorithm Comparison Dashboard
+Side-by-side performance analysis for all 13 algorithms:
+- **Grouped Bar Charts**: Compare avg wait, turnaround, response times
+- **Radar Charts**: Multi-dimensional algorithm profiling
+- **Ranking Tables**: Sortable by any metric
+- **Export Options**: PNG, SVG, CSV data export
+
+#### 🎯 Additional Visualizations
 
 | Chart Type | Description |
 |------------|-------------|
-| 📊 **Load Bars** | Real-time processor load with traffic-light colors (🟢→🟡→🔴) |
-| 📈 **Gantt Chart** | Interactive timeline showing process execution across processors |
-| 📉 **Performance Graphs** | Live metrics with trend lines and historical data |
-| 🔄 **Queue Visualization** | Ready queue depth per processor |
-| ⚖️ **Algorithm Comparison** | Side-by-side performance analysis with bar/line charts |
-| 🎯 **Fairness Index** | Jain's fairness visualization across processors |
-| ⏱️ **Response Time Distribution** | Histogram of process response times |
-| 🔥 **Heatmap** | Processor utilization over time |
+| 🔄 **Queue Visualization** | Ready queue depth per processor with process IDs |
+| 🎯 **Fairness Index** | Jain's fairness index dial (0.0 to 1.0) |
+| ⏱️ **Response Time Distribution** | Histogram with percentile markers (p50, p95, p99) |
+| 🔥 **Utilization Heatmap** | Time × Processor matrix showing load intensity |
+| 📊 **Process Timeline** | Individual process lifecycle from arrival to completion |
+| 🌡️ **System Temperature** | Overall system load gauge with thresholds |
 
 ### 📈 Comprehensive Analytics
 - **Process Metrics** — Turnaround time, waiting time, response time
