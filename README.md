@@ -9,7 +9,7 @@
 
 **A production-grade simulator for dynamic load balancing algorithms with AI-powered optimization**
 
-[Quick Start](#-quick-start) • [Features](#-features) • [Algorithms](#-load-balancing-algorithms) • [Documentation](#-api-reference) • [Contributing](#-contributing)
+[Quick Start](#-quick-start) • [Features](#-features) • [CPU Scheduling](#-cpu-scheduling-algorithms--the-complete-guide) • [Load Balancing](#-load-balancing-algorithms) • [API](#-api-reference) • [Contributing](#-contributing)
 
 </div>
 
@@ -154,7 +154,386 @@ The GUI features:
 
 ---
 
+## 📖 CPU Scheduling Algorithms — The Complete Guide
+
+> *"The CPU is like a popular club — everyone wants in, but only one can party at a time."*
+
+Understanding CPU scheduling is fundamental to OS design. Here's every algorithm you need to know, explained properly:
+
+---
+
+### 1️⃣ FCFS — First Come First Served
+
+> **The OG of schedulers.** Whoever arrives first, gets the CPU first.
+
+```
+Queue:  [P1: 24ms] → [P2: 3ms] → [P3: 3ms]
+        ═══════════════════════════════════
+        |      P1 (24ms)      | P2 | P3 |
+        0                     24   27   30
+```
+
+| Property | Value |
+|----------|-------|
+| **Type** | Non-preemptive |
+| **Complexity** | O(n) |
+| **Starvation** | No |
+
+**Pros:**
+- ✅ Dead simple to implement
+- ✅ No starvation — every process eventually runs
+- ✅ Zero overhead — no context switching mid-process
+
+**Cons:**
+- ❌ **Convoy Effect** — One fat process blocks everyone behind it
+- ❌ Poor average waiting time
+- ❌ Not suitable for interactive systems
+
+**When to use:** Batch systems where simplicity > performance
+
+---
+
+### 2️⃣ SJF — Shortest Job First
+
+> **The productivity king.** Always picks the process with the shortest burst time.
+
+```
+Queue:  P1(6ms), P2(8ms), P3(7ms), P4(3ms)
+
+Execution Order: P4 → P1 → P3 → P2
+        ═════════════════════════════════
+        | P4 |   P1   |   P3   |    P2   |
+        0    3        9       16        24
+```
+
+| Property | Value |
+|----------|-------|
+| **Type** | Non-preemptive |
+| **Complexity** | O(n log n) |
+| **Starvation** | Yes ⚠️ |
+
+**Pros:**
+- ✅ **Optimal average waiting time** — mathematically proven!
+- ✅ Great for batch processing
+- ✅ Maximizes throughput
+
+**Cons:**
+- ❌ **How do we know burst time?** — OS has to predict/estimate
+- ❌ Long jobs can **starve forever**
+- ❌ Not fair for longer processes
+
+**When to use:** When burst times are known or predictable
+
+---
+
+### 3️⃣ SRTF — Shortest Remaining Time First
+
+> **The chaotic younger sibling of SJF.** Preemptive — if a shorter job arrives, *boom*, context switch!
+
+```
+Time 0: P1(7ms) arrives, starts running
+Time 2: P2(4ms) arrives → P2 is shorter! Preempt P1!
+Time 4: P3(1ms) arrives → Even shorter! Preempt P2!
+
+        ═══════════════════════════════════════════
+        | P1 |   P2   | P3 |  P2  |     P1      |
+        0    2        4    5      7            12
+```
+
+| Property | Value |
+|----------|-------|
+| **Type** | Preemptive |
+| **Complexity** | O(n log n) |
+| **Starvation** | Yes ⚠️ |
+
+**Pros:**
+- ✅ **Best average waiting time** — even better than SJF
+- ✅ Responds immediately to short jobs
+- ✅ Great for time-sharing systems
+
+**Cons:**
+- ❌ Long processes get **constantly ghosted**
+- ❌ High context switch overhead
+- ❌ Still needs to predict burst times
+
+**When to use:** Interactive systems where responsiveness matters
+
+---
+
+### 4️⃣ Round Robin (RR) — The Crowd Favorite
+
+> **The democratic scheduler.** Everyone gets equal CPU time slices (quantum). Fair, balanced, *Gen Z approved* ✌️
+
+```
+Time Quantum = 4ms
+Processes: P1(10ms), P2(5ms), P3(8ms)
+
+        ═════════════════════════════════════════════════════
+        | P1 | P2 | P3 | P1 | P2 | P3 | P1 | P3 |
+        0    4    8   12   16   17   21   23   25
+              4ms each (except remainders)
+```
+
+| Property | Value |
+|----------|-------|
+| **Type** | Preemptive |
+| **Complexity** | O(1) per decision |
+| **Starvation** | No |
+
+**Quantum Sweet Spot:**
+
+| Quantum | Effect |
+|---------|--------|
+| Too small (1-2ms) | Context switch storm 🌪️ — more switching than computing |
+| Too large (100ms+) | Becomes FCFS in disguise |
+| Just right (10-100ms) | Balanced responsiveness and efficiency |
+
+**Pros:**
+- ✅ **Fair** — no process waits forever
+- ✅ Great for time-sharing systems
+- ✅ Predictable response time
+- ✅ No starvation
+
+**Cons:**
+- ❌ More context switches = more overhead
+- ❌ Quantum tuning is critical
+- ❌ Doesn't consider process priority
+
+**When to use:** Interactive/time-sharing systems, OS like Unix/Linux
+
+---
+
+### 5️⃣ Priority Scheduling
+
+> **VIP access.** CPU goes to the highest priority process. Because some processes are just *more important*.
+
+```
+Priority: 1 = Highest, 4 = Lowest
+
+Processes: P1(pri=3), P2(pri=1), P3(pri=4), P4(pri=2)
+
+Execution Order: P2 → P4 → P1 → P3
+        ═══════════════════════════════════
+        |  P2  |  P4  |  P1  |  P3  |
+        (highest)          (lowest)
+```
+
+| Property | Value |
+|----------|-------|
+| **Type** | Preemptive or Non-preemptive |
+| **Complexity** | O(n) or O(log n) with heap |
+| **Starvation** | Yes ⚠️ |
+
+**Two Flavors:**
+
+| Mode | Behavior |
+|------|----------|
+| **Preemptive** | Higher priority arrives? Interrupt current! |
+| **Non-preemptive** | Wait politely until current finishes |
+
+**The Starvation Problem:**
+Low priority processes might wait **forever** if high priority keeps coming.
+
+**Solution — Aging:**
+```python
+# Increase priority over time
+process.priority += time_waiting * AGING_FACTOR
+```
+
+**Pros:**
+- ✅ Important tasks get priority
+- ✅ Flexible for different workloads
+- ✅ Works well with real-time constraints
+
+**Cons:**
+- ❌ **Starvation** without aging
+- ❌ Priority inversion problem
+- ❌ Who decides priority? 🤔
+
+**When to use:** Real-time systems, systems with clear task importance
+
+---
+
+### 6️⃣ Multilevel Queue Scheduling
+
+> **Think of it like airport security lanes.** Different queues for different classes — no queue jumping allowed!
+
+```
+┌─────────────────────────────────────────────────┐
+│  Queue 1: System Processes    [RR, q=8]    ←── Highest Priority
+├─────────────────────────────────────────────────┤
+│  Queue 2: Interactive/Foreground  [RR, q=16]
+├─────────────────────────────────────────────────┤
+│  Queue 3: Background/Batch    [FCFS]       ←── Lowest Priority
+└─────────────────────────────────────────────────┘
+```
+
+| Property | Value |
+|----------|-------|
+| **Type** | Mixed (per queue) |
+| **Flexibility** | Low — fixed queues |
+| **Starvation** | Yes ⚠️ |
+
+**Queue Examples:**
+
+| Queue | Processes | Typical Scheduler |
+|-------|-----------|-------------------|
+| System | Kernel, drivers | Priority/FCFS |
+| Interactive | User apps, UI | Round Robin |
+| Batch | Backups, compiling | FCFS |
+
+**Pros:**
+- ✅ Different policies for different needs
+- ✅ System processes always prioritized
+- ✅ Efficient for categorized workloads
+
+**Cons:**
+- ❌ **No queue jumping** — you're stuck where you are
+- ❌ Low priority queues can starve
+- ❌ Rigid classification
+
+**When to use:** Systems with clearly separable process classes
+
+---
+
+### 7️⃣ MLFQ — Multilevel Feedback Queue
+
+> **The genius, adaptive version.** Processes can MOVE between queues based on behavior. Short jobs rise, CPU hogs fall.
+
+```
+                    New Process Enters
+                           ↓
+┌─────────────────────────────────────────────────┐
+│  Queue 0: Highest Priority   [RR, q=8]         │ ← Start here
+│           P1, P2                                │
+├─────────────────────────────────────────────────┤
+│  Queue 1: Medium Priority    [RR, q=16]        │
+│           P3                                    │ ← Demoted if uses full quantum
+├─────────────────────────────────────────────────┤
+│  Queue 2: Lowest Priority    [FCFS]            │
+│           P4, P5                                │ ← CPU hogs end up here
+└─────────────────────────────────────────────────┘
+                    ↑
+            Periodic boost (aging)
+```
+
+| Property | Value |
+|----------|-------|
+| **Type** | Preemptive |
+| **Adaptability** | Very High ⭐ |
+| **Starvation** | No (with boost) |
+
+**The Rules:**
+
+| Rule | Description |
+|------|-------------|
+| **Rule 1** | Higher priority queue runs first |
+| **Rule 2** | Same priority = Round Robin |
+| **Rule 3** | New jobs start at top queue |
+| **Rule 4** | Use full quantum? Move DOWN |
+| **Rule 5** | Give up CPU early (I/O)? Stay or move UP |
+| **Rule 6** | Periodic boost — everyone goes back to top |
+
+**The Brilliance:**
+- **Short interactive jobs** → Stay at top, fast response
+- **Long CPU-bound jobs** → Sink to bottom, still finish eventually
+- **Gaming prevention** → Track total CPU usage, not just last quantum
+
+**Pros:**
+- ✅ **Adapts to process behavior** automatically
+- ✅ Interactive jobs get great response time
+- ✅ No starvation (with periodic boost)
+- ✅ Approximates SJF without knowing burst time!
+
+**Cons:**
+- ❌ Complex to implement correctly
+- ❌ Many parameters to tune (quantums, queues, boost frequency)
+- ❌ Vulnerable to gaming (smart processes can exploit rules)
+
+**When to use:** General-purpose OS (Linux, macOS, Windows use MLFQ variants!)
+
+---
+
+### 8️⃣ EDF — Earliest Deadline First
+
+> **For when timing is EVERYTHING.** The process with the nearest deadline gets the CPU. No exceptions.
+
+```
+Time: 0
+P1: Deadline=10, Burst=3
+P2: Deadline=5,  Burst=2
+P3: Deadline=8,  Burst=4
+
+Execution: P2(d=5) → P3(d=8) → P1(d=10)
+        ═══════════════════════════════════
+        | P2 |    P3    |  P1  |
+        0    2          6      9
+        ✓d=5  ✓d=8       ✓d=10
+```
+
+| Property | Value |
+|----------|-------|
+| **Type** | Preemptive |
+| **Optimal for** | Real-time systems |
+| **Guarantee** | 100% utilization possible |
+
+**Real-Time Classification:**
+
+| Type | Deadline Miss | Example |
+|------|---------------|---------|
+| **Hard Real-Time** | Catastrophic failure | Pacemaker, ABS brakes |
+| **Soft Real-Time** | Degraded quality | Video streaming, gaming |
+
+**EDF Guarantee:**
+> If total CPU utilization ≤ 100%, EDF will meet ALL deadlines!
+
+$$U = \sum_{i=1}^{n} \frac{C_i}{T_i} \leq 1$$
+
+**Pros:**
+- ✅ **Optimal** — if deadlines can be met, EDF will meet them
+- ✅ Maximizes CPU utilization in real-time systems
+- ✅ Dynamic priority = adapts to changing deadlines
+
+**Cons:**
+- ❌ **Domino effect** — if overloaded, everything fails
+- ❌ Higher overhead than fixed-priority
+- ❌ Harder to analyze worst-case behavior
+
+**When to use:** Real-time operating systems (RTOS), embedded systems
+
+---
+
+### 📊 The Ultimate Scheduling Comparison
+
+| Algorithm | Preemptive | Starvation | Overhead | Best For |
+|-----------|:----------:|:----------:|:--------:|----------|
+| **FCFS** | ❌ | ❌ | Very Low | Batch systems |
+| **SJF** | ❌ | ⚠️ Yes | Low | Known burst times |
+| **SRTF** | ✅ | ⚠️ Yes | Medium | Interactive systems |
+| **Round Robin** | ✅ | ❌ | Medium | Time-sharing |
+| **Priority** | Both | ⚠️ Yes | Low-Medium | Real-time, mixed |
+| **MLQ** | Mixed | ⚠️ Yes | Low | Categorized workloads |
+| **MLFQ** | ✅ | ❌ | High | General-purpose OS |
+| **EDF** | ✅ | ❌ | Medium | Real-time systems |
+
+### 🎯 Quick Decision Tree
+
+```
+Need real-time guarantees?
+├── Yes → EDF or Priority (Hard RT)
+└── No → General purpose?
+    ├── Yes → MLFQ (most modern OS use this!)
+    └── No → What's your priority?
+        ├── Simplicity → FCFS or RR
+        ├── Efficiency → SJF/SRTF (if burst known)
+        └── Fairness → Round Robin
+```
+
+---
+
 ## ⚖️ Load Balancing Algorithms
+
+> Our simulator implements these algorithms for **multi-processor** systems:
 
 ### Quick Comparison
 
