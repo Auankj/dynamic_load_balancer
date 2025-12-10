@@ -526,6 +526,263 @@ class TestLoadBalancerFactory(unittest.TestCase):
         config = SimulationConfig(num_processors=8)
         balancer = LoadBalancerFactory.create(LoadBalancingAlgorithm.ROUND_ROBIN, config)
         self.assertEqual(balancer.config.num_processors, 8)
+    
+    def test_factory_creates_fcfs(self):
+        """Test factory creates FCFS balancer."""
+        balancer = LoadBalancerFactory.create(LoadBalancingAlgorithm.FCFS)
+        self.assertEqual(balancer.name, "FCFS (First Come First Served)")
+    
+    def test_factory_creates_sjf(self):
+        """Test factory creates SJF balancer."""
+        balancer = LoadBalancerFactory.create(LoadBalancingAlgorithm.SJF)
+        self.assertEqual(balancer.name, "SJF (Shortest Job First)")
+    
+    def test_factory_creates_priority(self):
+        """Test factory creates Priority balancer."""
+        balancer = LoadBalancerFactory.create(LoadBalancingAlgorithm.PRIORITY)
+        self.assertIn("Priority", balancer.name)
+    
+    def test_factory_creates_priority_preemptive(self):
+        """Test factory creates Preemptive Priority balancer."""
+        balancer = LoadBalancerFactory.create(LoadBalancingAlgorithm.PRIORITY_PREEMPTIVE)
+        self.assertIn("Preemptive", balancer.name)
+    
+    def test_factory_creates_mlfq(self):
+        """Test factory creates MLFQ balancer."""
+        balancer = LoadBalancerFactory.create(LoadBalancingAlgorithm.MLFQ)
+        self.assertIn("MLFQ", balancer.name)
+    
+    def test_factory_creates_edf(self):
+        """Test factory creates EDF balancer."""
+        balancer = LoadBalancerFactory.create(LoadBalancingAlgorithm.EDF)
+        self.assertEqual(balancer.name, "EDF (Earliest Deadline First)")
+    
+    def test_factory_all_algorithms_count(self):
+        """Test that all 13 algorithms are available."""
+        all_algos = LoadBalancerFactory.get_all_algorithms()
+        self.assertEqual(len(all_algos), 13)
+    
+    def test_factory_load_balancing_vs_scheduling(self):
+        """Test separation of load balancing and scheduling algorithms."""
+        lb_algos = LoadBalancerFactory.get_load_balancing_algorithms()
+        sched_algos = LoadBalancerFactory.get_scheduling_algorithms()
+        self.assertEqual(len(lb_algos), 5)  # RR, LL, Threshold, Q-Learn, DQN
+        self.assertEqual(len(sched_algos), 8)  # FCFS, SJF, SRTF, Priority x2, MLQ, MLFQ, EDF
+
+
+# =============================================================================
+# TEST SCHEDULING ALGORITHMS
+# =============================================================================
+
+class TestSchedulingAlgorithms(unittest.TestCase):
+    """Test advanced CPU scheduling algorithms."""
+    
+    def setUp(self):
+        """Set up test fixtures."""
+        from scheduling_algorithms import (
+            FCFSScheduler, SJFScheduler, SRTFScheduler,
+            PriorityScheduler, MultilevelQueueScheduler,
+            MLFQScheduler, EDFScheduler, ExtendedProcess
+        )
+        self.FCFSScheduler = FCFSScheduler
+        self.SJFScheduler = SJFScheduler
+        self.SRTFScheduler = SRTFScheduler
+        self.PriorityScheduler = PriorityScheduler
+        self.MultilevelQueueScheduler = MultilevelQueueScheduler
+        self.MLFQScheduler = MLFQScheduler
+        self.EDFScheduler = EDFScheduler
+        self.ExtendedProcess = ExtendedProcess
+    
+    def _create_test_process(self, pid, burst_time, arrival_time=0, priority=ProcessPriority.MEDIUM):
+        """Helper to create test process."""
+        return Process(pid=pid, burst_time=burst_time, arrival_time=arrival_time, priority=priority)
+    
+    def test_fcfs_is_non_preemptive(self):
+        """Test that FCFS is non-preemptive."""
+        scheduler = self.FCFSScheduler()
+        self.assertFalse(scheduler.is_preemptive)
+    
+    def test_fcfs_fifo_order(self):
+        """Test FCFS processes in arrival order."""
+        scheduler = self.FCFSScheduler()
+        p1 = self._create_test_process(1, burst_time=5, arrival_time=0)
+        p2 = self._create_test_process(2, burst_time=3, arrival_time=1)
+        p3 = self._create_test_process(3, burst_time=2, arrival_time=2)
+        
+        scheduler.add_process(p1)
+        scheduler.add_process(p2)
+        scheduler.add_process(p3)
+        
+        # First selected should be p1 (arrived first)
+        selected = scheduler.select_next_process()
+        self.assertEqual(selected.pid, 1)
+    
+    def test_sjf_selects_shortest(self):
+        """Test SJF selects shortest job."""
+        scheduler = self.SJFScheduler()
+        p1 = self._create_test_process(1, burst_time=10)
+        p2 = self._create_test_process(2, burst_time=3)  # Shortest
+        p3 = self._create_test_process(3, burst_time=7)
+        
+        scheduler.add_process(p1)
+        scheduler.add_process(p2)
+        scheduler.add_process(p3)
+        
+        selected = scheduler.select_next_process()
+        self.assertEqual(selected.pid, 2)  # Shortest job
+    
+    def test_sjf_is_non_preemptive(self):
+        """Test that SJF is non-preemptive."""
+        scheduler = self.SJFScheduler()
+        self.assertFalse(scheduler.is_preemptive)
+    
+    def test_srtf_is_preemptive(self):
+        """Test that SRTF is preemptive."""
+        scheduler = self.SRTFScheduler()
+        self.assertTrue(scheduler.is_preemptive)
+    
+    def test_srtf_selects_shortest_remaining(self):
+        """Test SRTF selects process with shortest remaining time."""
+        scheduler = self.SRTFScheduler()
+        p1 = self._create_test_process(1, burst_time=10)
+        p2 = self._create_test_process(2, burst_time=2)  # Shortest remaining
+        p3 = self._create_test_process(3, burst_time=5)
+        
+        scheduler.add_process(p1)
+        scheduler.add_process(p2)
+        scheduler.add_process(p3)
+        
+        selected = scheduler.select_next_process()
+        self.assertEqual(selected.pid, 2)
+    
+    def test_priority_scheduler_modes(self):
+        """Test priority scheduler preemptive/non-preemptive modes."""
+        non_preemptive = self.PriorityScheduler(preemptive=False)
+        preemptive = self.PriorityScheduler(preemptive=True)
+        
+        self.assertFalse(non_preemptive.is_preemptive)
+        self.assertTrue(preemptive.is_preemptive)
+    
+    def test_priority_selects_highest(self):
+        """Test priority scheduler selects highest priority (lowest number)."""
+        scheduler = self.PriorityScheduler()
+        p1 = self._create_test_process(1, burst_time=5, priority=ProcessPriority.LOW)
+        p2 = self._create_test_process(2, burst_time=5, priority=ProcessPriority.HIGH)
+        p3 = self._create_test_process(3, burst_time=5, priority=ProcessPriority.MEDIUM)
+        
+        scheduler.add_process(p1)
+        scheduler.add_process(p2)
+        scheduler.add_process(p3)
+        
+        selected = scheduler.select_next_process()
+        self.assertEqual(selected.pid, 2)  # HIGH priority
+    
+    def test_multilevel_queue_structure(self):
+        """Test multilevel queue has separate queues."""
+        from scheduling_algorithms import QueueLevel
+        scheduler = self.MultilevelQueueScheduler()
+        
+        # Should have queues for each level
+        self.assertEqual(len(scheduler.queues), 4)  # SYSTEM, INTERACTIVE, BATCH, IDLE
+        for level in QueueLevel:
+            self.assertIn(level, scheduler.queues)
+    
+    def test_mlfq_starts_at_top(self):
+        """Test MLFQ adds new processes to top queue."""
+        scheduler = self.MLFQScheduler(num_queues=4)
+        p = self._create_test_process(1, burst_time=10)
+        
+        scheduler.add_process(p)
+        
+        # New process should be in top queue (index 0)
+        self.assertEqual(len(scheduler.queues[0]), 1)
+    
+    def test_mlfq_parameters(self):
+        """Test MLFQ configurable parameters."""
+        scheduler = self.MLFQScheduler(num_queues=3, base_quantum=4, boost_interval=100)
+        
+        self.assertEqual(scheduler.num_queues, 3)
+        self.assertEqual(scheduler.base_quantum, 4)
+        self.assertEqual(scheduler.boost_interval, 100)
+        # Quantums should double per level: 4, 8, 16
+        self.assertEqual(scheduler.quantums, [4, 8, 16])
+    
+    def test_edf_is_preemptive(self):
+        """Test EDF is preemptive."""
+        scheduler = self.EDFScheduler()
+        self.assertTrue(scheduler.is_preemptive)
+    
+    def test_edf_selects_earliest_deadline(self):
+        """Test EDF selects process with earliest deadline."""
+        scheduler = self.EDFScheduler()
+        p1 = self._create_test_process(1, burst_time=5)
+        p2 = self._create_test_process(2, burst_time=5)
+        p3 = self._create_test_process(3, burst_time=5)
+        
+        scheduler.add_process(p1, deadline=30)
+        scheduler.add_process(p2, deadline=10)  # Earliest
+        scheduler.add_process(p3, deadline=20)
+        
+        selected = scheduler.select_next_process()
+        self.assertEqual(selected.pid, 2)  # Earliest deadline
+    
+    def test_scheduler_statistics(self):
+        """Test scheduler tracks statistics."""
+        scheduler = self.FCFSScheduler()
+        p = self._create_test_process(1, burst_time=5)
+        scheduler.add_process(p)
+        
+        stats = scheduler.get_statistics()
+        self.assertIn('total_processes', stats)
+        self.assertIn('completed_processes', stats)
+        self.assertIn('context_switches', stats)
+        self.assertEqual(stats['total_processes'], 1)
+    
+    def test_scheduler_reset(self):
+        """Test scheduler can be reset."""
+        scheduler = self.SJFScheduler()
+        p = self._create_test_process(1, burst_time=5)
+        scheduler.add_process(p)
+        
+        scheduler.reset()
+        
+        self.assertEqual(len(scheduler.ready_queue), 0)
+        self.assertIsNone(scheduler.running_process)
+
+
+class TestSchedulerFactory(unittest.TestCase):
+    """Test SchedulerFactory."""
+    
+    def test_create_all_schedulers(self):
+        """Test factory can create all scheduler types."""
+        from scheduling_algorithms import SchedulerFactory, SchedulingAlgorithm
+        
+        schedulers = [
+            SchedulingAlgorithm.FCFS,
+            SchedulingAlgorithm.SJF,
+            SchedulingAlgorithm.SRTF,
+            SchedulingAlgorithm.PRIORITY,
+            SchedulingAlgorithm.PRIORITY_PREEMPTIVE,
+            SchedulingAlgorithm.MULTILEVEL_QUEUE,
+            SchedulingAlgorithm.MLFQ,
+            SchedulingAlgorithm.EDF,
+        ]
+        
+        for algo in schedulers:
+            scheduler = SchedulerFactory.create_scheduler(algo)
+            self.assertIsNotNone(scheduler)
+    
+    def test_algorithm_info(self):
+        """Test algorithm info is comprehensive."""
+        from scheduling_algorithms import SchedulerFactory
+        
+        info = SchedulerFactory.get_algorithm_info()
+        self.assertGreater(len(info), 0)
+        
+        for name, details in info.items():
+            self.assertIn('preemptive', details)
+            self.assertIn('pros', details)
+            self.assertIn('cons', details)
 
 
 # =============================================================================

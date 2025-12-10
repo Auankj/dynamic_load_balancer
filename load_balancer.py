@@ -638,6 +638,7 @@ class LoadBalancerFactory:
     # Lazy import for AI balancers to avoid circular imports
     _qlearning_balancer_class = None
     _dqn_balancer_class = None
+    _scheduling_classes = None
     
     @classmethod
     def _get_qlearning_class(cls):
@@ -654,6 +655,24 @@ class LoadBalancerFactory:
             from dqn_balancer import DQNBalancer
             cls._dqn_balancer_class = DQNBalancer
         return cls._dqn_balancer_class
+    
+    @classmethod
+    def _get_scheduling_classes(cls):
+        """Lazy load scheduling algorithm balancers."""
+        if cls._scheduling_classes is None:
+            from scheduling_algorithms import (
+                FCFSBalancer, SJFBalancer, PriorityBalancer, 
+                MLFQBalancer, EDFBalancer
+            )
+            cls._scheduling_classes = {
+                'FCFS': FCFSBalancer,
+                'SJF': SJFBalancer,
+                'PRIORITY': lambda c: PriorityBalancer(c, preemptive=False),
+                'PRIORITY_PREEMPTIVE': lambda c: PriorityBalancer(c, preemptive=True),
+                'MLFQ': MLFQBalancer,
+                'EDF': EDFBalancer,
+            }
+        return cls._scheduling_classes
     
     @staticmethod
     def create(algorithm: LoadBalancingAlgorithm, 
@@ -673,6 +692,7 @@ class LoadBalancerFactory:
         Raises:
             ValueError: If algorithm is not supported
         """
+        # Original load balancing algorithms
         if algorithm == LoadBalancingAlgorithm.ROUND_ROBIN:
             return RoundRobinBalancer(config)
         elif algorithm == LoadBalancingAlgorithm.LEAST_LOADED:
@@ -685,6 +705,34 @@ class LoadBalancerFactory:
         elif algorithm == LoadBalancingAlgorithm.DQN:
             DQNBalancer = LoadBalancerFactory._get_dqn_class()
             return DQNBalancer(config=config, num_processors=num_processors)
+        
+        # Classic CPU scheduling algorithms
+        elif algorithm == LoadBalancingAlgorithm.FCFS:
+            classes = LoadBalancerFactory._get_scheduling_classes()
+            return classes['FCFS'](config)
+        elif algorithm == LoadBalancingAlgorithm.SJF:
+            classes = LoadBalancerFactory._get_scheduling_classes()
+            return classes['SJF'](config)
+        elif algorithm == LoadBalancingAlgorithm.SRTF:
+            # SRTF uses SJF balancer with preemptive behavior
+            classes = LoadBalancerFactory._get_scheduling_classes()
+            return classes['SJF'](config)
+        elif algorithm == LoadBalancingAlgorithm.PRIORITY:
+            classes = LoadBalancerFactory._get_scheduling_classes()
+            return classes['PRIORITY'](config)
+        elif algorithm == LoadBalancingAlgorithm.PRIORITY_PREEMPTIVE:
+            classes = LoadBalancerFactory._get_scheduling_classes()
+            return classes['PRIORITY_PREEMPTIVE'](config)
+        elif algorithm == LoadBalancingAlgorithm.MULTILEVEL_QUEUE:
+            # Multilevel queue uses MLFQ balancer
+            classes = LoadBalancerFactory._get_scheduling_classes()
+            return classes['MLFQ'](config)
+        elif algorithm == LoadBalancingAlgorithm.MLFQ:
+            classes = LoadBalancerFactory._get_scheduling_classes()
+            return classes['MLFQ'](config)
+        elif algorithm == LoadBalancingAlgorithm.EDF:
+            classes = LoadBalancerFactory._get_scheduling_classes()
+            return classes['EDF'](config)
         else:
             raise ValueError(f"Unknown algorithm: {algorithm}")
     
@@ -694,9 +742,35 @@ class LoadBalancerFactory:
         return list(LoadBalancingAlgorithm)
     
     @staticmethod
+    def get_load_balancing_algorithms() -> List[LoadBalancingAlgorithm]:
+        """Get only load balancing algorithms (not CPU scheduling)."""
+        return [
+            LoadBalancingAlgorithm.ROUND_ROBIN,
+            LoadBalancingAlgorithm.LEAST_LOADED,
+            LoadBalancingAlgorithm.THRESHOLD_BASED,
+            LoadBalancingAlgorithm.Q_LEARNING,
+            LoadBalancingAlgorithm.DQN,
+        ]
+    
+    @staticmethod
+    def get_scheduling_algorithms() -> List[LoadBalancingAlgorithm]:
+        """Get only CPU scheduling algorithms."""
+        return [
+            LoadBalancingAlgorithm.FCFS,
+            LoadBalancingAlgorithm.SJF,
+            LoadBalancingAlgorithm.SRTF,
+            LoadBalancingAlgorithm.PRIORITY,
+            LoadBalancingAlgorithm.PRIORITY_PREEMPTIVE,
+            LoadBalancingAlgorithm.MULTILEVEL_QUEUE,
+            LoadBalancingAlgorithm.MLFQ,
+            LoadBalancingAlgorithm.EDF,
+        ]
+    
+    @staticmethod
     def get_algorithm_descriptions() -> Dict[str, str]:
         """Get descriptions of all algorithms."""
         return {
+            # Load Balancing
             LoadBalancingAlgorithm.ROUND_ROBIN.value: 
                 "Simple cyclic distribution - fair but doesn't consider load",
             LoadBalancingAlgorithm.LEAST_LOADED.value: 
@@ -706,7 +780,25 @@ class LoadBalancerFactory:
             LoadBalancingAlgorithm.Q_LEARNING.value:
                 "AI-powered adaptive balancing using reinforcement learning",
             LoadBalancingAlgorithm.DQN.value:
-                "Deep Q-Network with neural network function approximation"
+                "Deep Q-Network with neural network function approximation",
+            
+            # CPU Scheduling
+            LoadBalancingAlgorithm.FCFS.value:
+                "First Come First Served - simple FIFO, non-preemptive, may cause convoy effect",
+            LoadBalancingAlgorithm.SJF.value:
+                "Shortest Job First - optimal avg waiting time, but may starve long jobs",
+            LoadBalancingAlgorithm.SRTF.value:
+                "Shortest Remaining Time First - preemptive SJF, best response time",
+            LoadBalancingAlgorithm.PRIORITY.value:
+                "Priority-based scheduling with aging to prevent starvation",
+            LoadBalancingAlgorithm.PRIORITY_PREEMPTIVE.value:
+                "Preemptive priority - higher priority can interrupt lower",
+            LoadBalancingAlgorithm.MULTILEVEL_QUEUE.value:
+                "Multiple queues with strict hierarchy - system, interactive, batch, idle",
+            LoadBalancingAlgorithm.MLFQ.value:
+                "Multilevel Feedback Queue - adaptive, processes move between queues",
+            LoadBalancingAlgorithm.EDF.value:
+                "Earliest Deadline First - optimal for real-time systems",
         }
 
 

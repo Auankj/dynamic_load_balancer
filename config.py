@@ -45,20 +45,41 @@ class ProcessState(Enum):
 
 class LoadBalancingAlgorithm(Enum):
     """
-    Available load balancing algorithms.
+    Available load balancing and scheduling algorithms.
     
-    Each algorithm has different characteristics:
+    Load Balancing Algorithms:
     - ROUND_ROBIN: Fair distribution, simple, doesn't consider actual load
     - LEAST_LOADED: Assigns to least busy processor, better load distribution
     - THRESHOLD_BASED: Only migrates when load difference exceeds threshold
     - Q_LEARNING: AI-powered adaptive balancing using reinforcement learning (tabular)
     - DQN: Deep Q-Network with neural network function approximation
+    
+    Classic CPU Scheduling Algorithms:
+    - FCFS: First Come First Served - the OG scheduler
+    - SJF: Shortest Job First - optimal waiting time (non-preemptive)
+    - SRTF: Shortest Remaining Time First - preemptive SJF
+    - PRIORITY: Priority-based scheduling with aging
+    - PRIORITY_PREEMPTIVE: Preemptive priority scheduling
+    - MULTILEVEL_QUEUE: Multiple queues with different priorities
+    - MLFQ: Multilevel Feedback Queue - adaptive scheduling
+    - EDF: Earliest Deadline First - real-time scheduling
     """
+    # Load Balancing Algorithms
     ROUND_ROBIN = "Round Robin"
     LEAST_LOADED = "Least Loaded First"
     THRESHOLD_BASED = "Threshold Based"
     Q_LEARNING = "AI (Q-Learning)"
     DQN = "AI (DQN)"
+    
+    # Classic CPU Scheduling Algorithms
+    FCFS = "FCFS (First Come First Served)"
+    SJF = "SJF (Shortest Job First)"
+    SRTF = "SRTF (Shortest Remaining Time First)"
+    PRIORITY = "Priority Scheduling"
+    PRIORITY_PREEMPTIVE = "Priority Scheduling (Preemptive)"
+    MULTILEVEL_QUEUE = "Multilevel Queue"
+    MLFQ = "MLFQ (Multilevel Feedback Queue)"
+    EDF = "EDF (Earliest Deadline First)"
 
 
 class ProcessPriority(Enum):
